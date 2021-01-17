@@ -3,7 +3,7 @@
 - Ensure blender version is 2.9 or above
 - Ensure Trackmania2020 and NadeoImporter are installed (https://doc.trackmania.com/nadeo-importer/)
 - Download (zip / repository) into "%AppData%/Roaming/Blender Foundation/Blender/2.91/scripts/addons/"
-- In blender: Edit > Preferences > Add-ons > Install > Select __init__.py file from downloaded files
+- In blender: Edit > Preferences > Add-ons > Install > Select \_\_init\_\_.py file from downloaded files
 
 Since this addon is still heavily WIP, it is recommanded you download it through git to get updates more easily.
 
