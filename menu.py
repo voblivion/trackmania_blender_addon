@@ -128,6 +128,20 @@ class OBJECT_OT_TrackmaniaAddLight(Operator):
         obj.name = 'Spot Light' if self.type == 'SPOT' else 'Point Light'
         return {'FINISHED'}
 
+class OBJECT_OT_TrackmaniaAddPivot(Operator):
+    bl_idname = 'object.trackmania_add_light'
+    bl_label = 'Add Pivot'
+    bl_description = 'Adds a Pivot to active item (scene)'
+    bl_options = {'REGISTER', 'UNDO'}
+    
+    def execute(self, context):
+        bpy.ops.object.add(type='EMPTY')
+        obj = context.active_object
+        obj.name = 'Pivot'
+        obj.empty_display_type = 'PLAIN_AXES'
+        obj.trackmania_pivot.is_pivot = True
+        return {'FINISHED'}
+
 class MATERIAL_OT_TrackmaniaLoadMaterials(Operator):
     bl_idname = 'object.trackmania_load_materials'
     bl_label = 'Load Material Library'
@@ -140,7 +154,7 @@ class MATERIAL_OT_TrackmaniaLoadMaterials(Operator):
 
 class VIEW3D_PT_TrackmaniaMaterialLibrary(Panel):
     bl_idname = 'VIEW3D_PT_TrackmaniaMaterialLibrary'
-    bl_label = 'Materail Library'
+    bl_label = 'Material Library'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'Trackmania'
@@ -156,6 +170,7 @@ class VIEW3D_MT_TrackmaniaAdd(Menu):
     def draw(self, context):
         layout = self.layout
         layout.operator(OBJECT_OT_TrackmaniaAddItem.bl_idname)
+        layout.operator(OBJECT_OT_TrackmaniaAddPivot.bl_idname)
         layout.separator()
         layout.operator(OBJECT_OT_TrackmaniaAddMesh.bl_idname)
         layout.operator(OBJECT_OT_TrackmaniaAddMesh.bl_idname, text='Add Trigger').is_trigger = True
@@ -172,6 +187,7 @@ classes = (
     OBJECT_OT_TrackmaniaAddMesh,
     OBJECT_OT_TrackmaniaAddSpawn,
     OBJECT_OT_TrackmaniaAddLight,
+    OBJECT_OT_TrackmaniaAddPivot,
     VIEW3D_MT_TrackmaniaAdd,
     MATERIAL_OT_TrackmaniaLoadMaterials,
     VIEW3D_PT_TrackmaniaMaterialLibrary,

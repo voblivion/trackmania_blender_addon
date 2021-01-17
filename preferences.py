@@ -11,7 +11,7 @@ from bpy.props import (
 )
 
 class TrackmaniaAddonPreferences(AddonPreferences):
-    bl_idname = __name__
+    bl_idname = 'Trackmania'
     
     install_dir: StringProperty(
         name='Trackmania Install Directory',
