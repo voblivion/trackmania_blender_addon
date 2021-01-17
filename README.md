@@ -17,6 +17,11 @@ This repository also includes textures for default materials. When dowloading zi
 
 Any scene is considered an item in itself so 1 blender file can be exported into multiple items. Item will be exported according to scene's name with forward slashes ('/') taken into account. If you don't want a scene to be exported as an Item (for instance if your scene is a test one) you can un-check all export checkboxes (see below).
 
+Create :
+- top bar > Add > Trackmania > Add Item
+
+When creating an Item this way, in addition to the scene being created it will also associate a default world to be used when exporting Icon. Alternatively you can create the scene yourself and set its world (that is if you need ambient color; see below).
+
 
 Settings :
 - sidebar > Trackmania > Item
@@ -28,11 +33,9 @@ Export :
 
 When exporting Item you have the option to generate an Icon for it (alternatively you can place your own in appropriate export folder).
 
-Make sure you also set a background color to ensure scene is correctly lit: World Properties > New World > Surface > Color
+You can customize Icon's ambient light by editing world's one: World Properties > Surface > Color. Be aware that default scene's world is shared amongst items in a same blend file, so create a new one if you want it to be different for some items.
 
-You can also add your own directional (avoid Spot/Point Lights, else they will be exported).
-
-_Still WIP, will expose properties to customize it in the future._
+You can also add your own lights in the scene for icon generation (they don't have to be exported; see below).
 
 ## Mesh / Trigger
 
@@ -60,7 +63,7 @@ Only Spot/Point lights can be exported.
 Create :
 - top bar > Add > Trackmania > Add Spot/Point Light
 
-_Any spot/point light created through standard blender buttons will also be exported_
+_Any spot/point light created through standard blender buttons can also be exported: sidebar > Trackmania > Light > Export_
 
 ## Pivots
 
