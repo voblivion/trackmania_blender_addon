@@ -107,7 +107,7 @@ class OBJECT_OT_TrackmaniaAddSpawn(Operator):
         bpy.ops.object.select_all(action='DESELECT')
         obj = context.blend_data.objects.new('Spawn Point', get_library_spawn(context).data)
         context.collection.objects.link(obj)
-        obj.matrix_world = Matrix.Rotation(radians(90), 4, 'Y') @ Matrix.Rotation(radians(-90), 4, 'X')
+        obj.matrix_world = Matrix.Rotation(radians(90), 4, 'Z') @ Matrix.Rotation(radians(90), 4, 'X')
         obj.data.trackmania_mesh.type = 'SPAWN'
         obj.select_set(True)
         context.view_layer.objects.active = obj
