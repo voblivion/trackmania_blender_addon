@@ -264,6 +264,7 @@ class SCENE_OT_TrackmaniaRenderIcon(Operator):
         
         # Set/Override camera if required
         custom_camera_object = scene.camera
+        # TODO what about no default camera?
         if True or custom_camera_object is None or self.force_default_camera:
             camera = bpy.data.cameras.new('Camera')
             camera.type = 'ORTHO'
@@ -315,7 +316,7 @@ class SCENE_OT_TrackmaniaRenderIcon(Operator):
             bpy.data.objects.remove(sun_object)
         
         # Remove created camera and reset previous one
-        if custom_camera_object is None or self.force_default_camera:
+        if True or custom_camera_object is None or self.force_default_camera:
             bpy.data.objects.remove(scene.camera)
             if custom_camera_object is not None:
                 scene.camera = custom_camera_object
