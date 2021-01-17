@@ -73,6 +73,15 @@ class OBJECT_OT_TrackmaniaAddItem(Operator):
     
     def execute(self, context):
         bpy.ops.scene.new(type='NEW')
+        
+        scene = context.scene
+        default_render_world = context.blend_data.worlds.get('TMDebug_DefaultRenderWorld')
+        if default_render_world is None:
+            default_render_world = context.blend_data.worlds.new('TMDebug_DefaultRenderWorld')
+            color = 0x444444
+        
+        scene.world = default_render_world
+        
         return {'FINISHED'}
 
 class OBJECT_OT_TrackmaniaAddMesh(Operator):
@@ -129,7 +138,7 @@ class OBJECT_OT_TrackmaniaAddLight(Operator):
         return {'FINISHED'}
 
 class OBJECT_OT_TrackmaniaAddPivot(Operator):
-    bl_idname = 'object.trackmania_add_light'
+    bl_idname = 'object.trackmania_add_pivot'
     bl_label = 'Add Pivot'
     bl_description = 'Adds a Pivot to active item (scene)'
     bl_options = {'REGISTER', 'UNDO'}

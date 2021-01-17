@@ -10,6 +10,7 @@ from bpy.props import (
     BoolProperty,
     EnumProperty,
     FloatProperty,
+    FloatVectorProperty,
     PointerProperty,
     StringProperty,
 )
@@ -167,6 +168,16 @@ class SCENE_PG_TrackmaniaItem(PropertyGroup):
         default=45,
         update=update_camera_settings
     )
+    icon_ambient_light_color: FloatVectorProperty(
+        name='Ambient Light Color',
+        description='Ambient light color used for icon generation.',
+        subtype='COLOR',
+        size=3,
+        min=0,
+        max=1,
+        default=(1, 1, 1)
+    )
+
 
 def get_preferences(context):
     return context.preferences.addons['Trackmania'].preferences
@@ -246,8 +257,9 @@ class SCENE_OT_TrackmaniaRenderIcon(Operator):
                 if not object.hide_render:
                     invisible_objects.append(object)
                     object.hide_render = True
-                
+        
         # Add light
+        # TODO WIP
         light = bpy.data.lights.new('Sun', type='SUN')
         light.energy = 3
         light_object = bpy.data.objects.new('Sun', light)
