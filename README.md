@@ -7,6 +7,9 @@
 
 Since this addon is still heavily WIP, it is recommanded you download it through git to get updates more easily.
 
+
+This repository includes textures for default materials. When dowloading zip version of it they won't be included. Make sure you replace them with your own if you want to use that feature.
+
 # How to use
 
 ## Item
