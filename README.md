@@ -37,3 +37,7 @@ Only Spot/Point lights can be exported, which you can create either through blen
 ## Pivots
 
 Add an empty object and set "Is Pivot" in: "Trackmania" sidebar > "Pivot" panel.
+
+## Materials
+
+If you want to use default TM materials, make sure you load material library ("Trackmania" sidebar > "Material Library" panel) then you can apply any of them to your meshes.
