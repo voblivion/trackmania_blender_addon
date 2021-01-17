@@ -474,7 +474,7 @@ class SCENE_OT_TrackmaniaExportItem(Operator):
                 if object.trackmania_pivot.is_pivot:
                     xml_pivot = et.SubElement(xml_pivots, 'Pivot')
                     pos = object.location
-                    xml_pivot.set('Pos', '{} {} {}'.format(pos.x, pos.z, pos.y))
+                    xml_pivot.set('Pos', '{} {} {}'.format(pos.x, pos.z, -pos.y))
         
         # PivotSnap
         if not item_settings.pivot_automatic_snap:
