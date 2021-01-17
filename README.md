@@ -5,6 +5,8 @@
 - Download (zip / repository) into "%AppData%/Roaming/Blender Foundation/Blender/2.91/scripts/addons/"
 - In blender: Edit > Preferences > Add-ons > Install > Select __init__.py file from downloaded files
 
+Since this addon is still heavily WIP, it is recommanded you download it through git to get updates more easily.
+
 # How to use
 
 ## Item
