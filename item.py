@@ -306,6 +306,13 @@ class SCENE_OT_TrackmaniaExportMesh(Operator):
                 old_object_names.append((object, object.name))
                 object.name = object.data.trackmania_mesh.get_export_name(object.name)
         
+        start_mesh = None
+        start_object = scene.objects.get('_socket_start')
+        if start_object is not None:
+            tmp_mesh = context.blend_data.meshes.new('__TMP__')
+            start_mesh = start_object.data
+            start_object.data = tmp_mesh
+        
         export_path = self.get_export_path(context, scene)
         export_path.parents[0].mkdir(parents=True, exist_ok=True)
         
@@ -313,6 +320,11 @@ class SCENE_OT_TrackmaniaExportMesh(Operator):
         context.window.scene = scene
         bpy.ops.export_scene.fbx(filepath=str(export_path), object_types={'MESH', 'LIGHT'}, axis_up='Y')
         context.window.scene = active_scene
+        
+        if start_object is not None:
+            tmp_mesh = start_object.data
+            start_object.data = start_mesh
+            context.blend_data.meshes.remove(tmp_mesh)
         
         for entry in old_object_names:
             entry[0].name = entry[1]
