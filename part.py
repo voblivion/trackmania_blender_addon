@@ -34,6 +34,29 @@ class VIEW3D_PT_TrackmaniaPivot(Panel):
         layout.prop(pivot_settings, 'is_pivot')
     
 
+class LIGHT_PG_TrackmaniaLight(PropertyGroup):
+    export: BoolProperty(
+        name='Export',
+        default=False
+    )
+
+class VIEW3D_PT_TrackmaniaLight(Panel):
+    bl_idname = 'VIEW3D_PT_TrackmaniaLight'
+    bl_label = 'Light'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'Trackmania'
+    
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None and context.active_object.type == 'LIGHT'
+    
+    def draw(self, context):
+        layout = self.layout
+        light_settings = context.active_object.data.trackmania_light
+        
+        layout.prop(light_settings, 'export')
+
 class MESH_PG_TrackmaniaMesh(PropertyGroup):
     bl_idname = 'MESH_PG_TrackmaniaMesh'
     
@@ -102,6 +125,8 @@ classes = (
     VIEW3D_PT_TrackmaniaPivot,
     MESH_PG_TrackmaniaMesh,
     VIEW3D_PT_TrackmaniaMesh,
+    LIGHT_PG_TrackmaniaLight,
+    VIEW3D_PT_TrackmaniaLight,
 )
 
 def register():
@@ -109,11 +134,14 @@ def register():
         bpy.utils.register_class(cls)
     bpy.types.Object.trackmania_pivot = PointerProperty(type=OBJECT_PG_TrackmaniaPivot)
     bpy.types.Mesh.trackmania_mesh = PointerProperty(type=MESH_PG_TrackmaniaMesh)
+    bpy.types.Light.trackmania_light = PointerProperty(type=LIGHT_PG_TrackmaniaLight)
 
 def unregister():
     for cls in classes:
         bpy.utils.unregister_class(cls)
+    del bpy.types.Object.trackmania_pivot
     del bpy.types.Mesh.trackmania_mesh
+    del bpy.types.Light.trackmania_light
 
 
 

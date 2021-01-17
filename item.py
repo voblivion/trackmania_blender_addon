@@ -468,7 +468,7 @@ class SCENE_OT_TrackmaniaExportItem(Operator):
         # Lights
         xml_lights = et.SubElement(xml_item, 'Lights')
         for object in scene.objects:
-            if object.type == 'LIGHT' and object.data.type in ['POINT', 'SPOT']:
+            if object.type == 'LIGHT' and object.data.type in ['POINT', 'SPOT'] and object.date.trackmania_light.export:
                 light = object.data
                 xml_light = et.SubElement(xml_lights, 'Light')
                 color = [int(channel * 255) for channel in light.color]

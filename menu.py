@@ -135,6 +135,7 @@ class OBJECT_OT_TrackmaniaAddLight(Operator):
         obj = context.active_object
         obj.data.type = self.type
         obj.name = 'Spot Light' if self.type == 'SPOT' else 'Point Light'
+        obj.data.trackmania_light.export = True
         return {'FINISHED'}
 
 class OBJECT_OT_TrackmaniaAddPivot(Operator):
