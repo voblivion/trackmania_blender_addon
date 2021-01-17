@@ -153,29 +153,48 @@ class SCENE_PG_TrackmaniaItem(PropertyGroup):
         default=False
     )
     # Icon
-    def update_camera_settings(self, context):
+    def update_icon_settings(self, context):
         bpy.ops.trackmania.render_icon(force_default_camera=True, save=False)
     
     icon_camera_pitch: FloatProperty(
         name='Camera Pitch',
         description='Pitch angle of default camera. Add your own camera to ignore.',
         default=45,
-        update=update_camera_settings
+        update=update_icon_settings
     )
     icon_camera_yaw: FloatProperty(
         name='Camera Yaw',
         description='Yaw angle of camera. Add your own camera to ignore.',
         default=45,
-        update=update_camera_settings
+        update=update_icon_settings
     )
-    icon_ambient_light_color: FloatVectorProperty(
-        name='Ambient Light Color',
-        description='Ambient light color used for icon generation.',
+    icon_enable_sun: BoolProperty(
+        name='Enable Sun',
+        description='If set, will add a sun to the scene before generating Item\'s Icon.',
+        default=True,
+        update=update_icon_settings
+    )
+    icon_sun_color: FloatVectorProperty(
+        name='Sun Color',
+        description='Color for generated Sun',
         subtype='COLOR',
         size=3,
         min=0,
         max=1,
-        default=(1, 1, 1)
+        default=(1, 1, 1),
+        update=update_icon_settings
+    )
+    icon_sun_offset_pitch: FloatProperty(
+        name='Sun Offset Pitch',
+        description='By how much -relative to camera\'s pitch- sun\'s pitch is offset.',
+        default=15,
+        update=update_icon_settings
+    )
+    icon_sun_offset_yaw: FloatProperty(
+        name='Sun Offset Yaw',
+        description='By how much -relative to camera\'s yaw- sun\'s yaw is offset.',
+        default=15,
+        update=update_icon_settings
     )
 
 
@@ -209,6 +228,19 @@ class SCENE_OT_TrackmaniaRenderIcon(Operator):
         default=''
     )
     
+    @staticmethod
+    def offset_look_at(object, bounds_w, pitch, yaw):
+        center_position_w = bd_utils.get_vectors_center(bounds_w)
+        center_matrix_w = Matrix.Translation(center_position_w)
+        radius = max([bound.length for bound in bounds_w])
+        object_position_c = Matrix.Rotation(radians(yaw), 4, 'Z') \
+            @ Matrix.Rotation(radians(pitch), 4, 'Y') \
+            @ Vector((-1 - 2 * radius, 0, 0))
+        object_position_matrix_c = Matrix.Translation(object_position_c)
+        object_look_at_matrix = (-object_position_c).to_track_quat('-Z', 'Y').to_matrix().to_4x4()
+        object_matrix_w = center_matrix_w @ object_position_matrix_c @ object_look_at_matrix
+        object.matrix_world = object_matrix_w
+    
     def execute(self, context):
         scene = context.scene if self.scene == '' else context.blend_data.scenes[self.scene]
         item_settings = scene.trackmania_item
@@ -219,6 +251,17 @@ class SCENE_OT_TrackmaniaRenderIcon(Operator):
         scene.render.film_transparent = True
         scene.render.image_settings.file_format = 'TARGA'
         
+        # Compute scene's bounds (for Camera and Sun placements)
+        bounds_w = []
+        if True:
+            visible_objects = []
+            for object in scene.objects:
+                if not object.hide_render and object.type == 'MESH':
+                    mesh_settings = object.data.trackmania_mesh
+                    if mesh_settings.type == 'MESH' and mesh_settings.is_visible:
+                        visible_objects.append(object)
+            bounds_w = bd_utils.get_objects_bounds(visible_objects)
+        
         # Set/Override camera if required
         custom_camera_object = scene.camera
         if True or custom_camera_object is None or self.force_default_camera:
@@ -228,25 +271,8 @@ class SCENE_OT_TrackmaniaRenderIcon(Operator):
             context.collection.objects.link(camera_object)
             scene.camera = camera_object
             
-            visible_objects = []
-            for object in scene.objects:
-                if not object.hide_render and object.type == 'MESH':
-                    mesh_settings = object.data.trackmania_mesh
-                    if mesh_settings.type == 'MESH' and mesh_settings.is_visible:
-                        visible_objects.append(object)
-            bounds_w = bd_utils.get_objects_bounds(visible_objects)
-            center_position_w = bd_utils.get_vectors_center(bounds_w)
-            center_matrix_w = Matrix.Translation(center_position_w)
-            radius = max([bound.length for bound in bounds_w])
-            camera_position_c = Matrix.Rotation(radians(item_settings.icon_camera_yaw), 4, 'Z') \
-                @ Matrix.Rotation(radians(item_settings.icon_camera_pitch), 4, 'Y') \
-                @ Vector((-1 - 2 * radius, 0, 0))
-            camera_position_matrix_c = Matrix.Translation(camera_position_c)
-            camera_look_at_matrix = (-camera_position_c).to_track_quat('-Z', 'Y').to_matrix().to_4x4()
-            camera_matrix_w = center_matrix_w @ camera_position_matrix_c @ camera_look_at_matrix
-            camera_object.matrix_world = camera_matrix_w
-            
-            item_matrix_v = bd_utils.inverse_matrix(camera_matrix_w)
+            self.offset_look_at(camera_object, bounds_w, item_settings.icon_camera_pitch, item_settings.icon_camera_yaw)
+            item_matrix_v = bd_utils.inverse_matrix(camera_object.matrix_world)
             bounds_v = [item_matrix_v @ vector for vector in bounds_w]
             camera.ortho_scale = 2 * max(chain((abs(pos.x) for pos in bounds_v), (abs(pos.y) for pos in bounds_v)))
         
@@ -259,11 +285,19 @@ class SCENE_OT_TrackmaniaRenderIcon(Operator):
                     object.hide_render = True
         
         # Add light
-        # TODO WIP
-        light = bpy.data.lights.new('Sun', type='SUN')
-        light.energy = 3
-        light_object = bpy.data.objects.new('Sun', light)
-        scene.collection.objects.link(light_object)
+        sun_object = None
+        if item_settings.icon_enable_sun:
+            sun_light = bpy.data.lights.new('Sun', type='SUN')
+            sun_light.energy = 3
+            sun_light.color = item_settings.icon_sun_color
+            sun_object = bpy.data.objects.new('Sun', sun_light)
+            scene.collection.objects.link(sun_object)
+            self.offset_look_at(
+                sun_object,
+                bounds_w,
+                item_settings.icon_camera_pitch + item_settings.icon_sun_offset_pitch,
+                item_settings.icon_camera_yaw + item_settings.icon_sun_offset_yaw
+            )
         
         # Change render path
         export_path = self.get_export_path(context, scene)
@@ -277,7 +311,8 @@ class SCENE_OT_TrackmaniaRenderIcon(Operator):
         scene.render.filepath = prev_render_path
         
         # Remove light
-        bpy.data.objects.remove(light_object)
+        if sun_object is not None:
+            bpy.data.objects.remove(sun_object)
         
         # Remove created camera and reset previous one
         if custom_camera_object is None or self.force_default_camera:
@@ -588,6 +623,11 @@ class VIEW3D_PT_TrackmaniaItem(Panel):
         category.label(text='Icon')
         category.prop(item_settings, 'icon_camera_pitch')
         category.prop(item_settings, 'icon_camera_yaw')
+        category.prop(item_settings, 'icon_enable_sun')
+        if item_settings.icon_enable_sun:
+            category.prop(item_settings, 'icon_sun_color')
+            category.prop(item_settings, 'icon_sun_offset_pitch')
+            category.prop(item_settings, 'icon_sun_offset_yaw')
         
         # TODO : export buttons
         category = layout.box()
