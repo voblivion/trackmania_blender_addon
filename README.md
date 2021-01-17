@@ -2,7 +2,7 @@
 
 - Ensure blender version is 2.9 or above
 - Ensure Trackmania2020 and NadeoImporter are installed (https://doc.trackmania.com/nadeo-importer/)
-- Download zip from repository (github > green "Code" button > Download ZIP)
+- Download ZIP from repository (github > green "Code" button > Download ZIP)
 - Install into blender: Edit > Preferences > Add-ons > Install > Select downloaded zip file
 - Change Author Name to yours: Edit > Preferences > Add-ons > Trackmania > Author Name
 
@@ -71,3 +71,5 @@ Settings :
 
 You can create all the material you want, then setup how you want them exported. You can also use default materials (includes roads, platforms, and deco-hill) by loading it:
 - sidebar > Trackmania > Material Library > Load Material Library
+
+_This part is still WIP and some default materials may be exported with inadequate colors. In addition you will have to add the textures yourself into the addon because they are not included in the ZIP file._
