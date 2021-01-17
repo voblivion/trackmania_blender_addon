@@ -31,11 +31,13 @@ Export :
 
 ## Icon
 
-When exporting Item you have the option to generate an Icon for it (alternatively you can place your own in appropriate export folder).
+When exporting Item you have the option to generate an Icon for it (alternatively you can place your own TARGA file in appropriate export folder).
 
 You can customize Icon's ambient light by editing world's one: World Properties > Surface > Color. Be aware that default scene's world is shared amongst items in a same blend file, so create a new one if you want it to be different for some items.
 
 You can also add your own lights in the scene for icon generation (they don't have to be exported; see below).
+
+A preview of generated Icon can be seen when updated camera/sun parameters. To see it live, open a render preview (the handy way I found is to add a dummy camera in the scene then press F12 to have open render's popup) then update camera/sun parameters as you please.
 
 ## Mesh / Trigger
 
