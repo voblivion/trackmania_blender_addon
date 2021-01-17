@@ -15,7 +15,7 @@ This repository also includes textures for default materials. When dowloading zi
 
 ## Item
 
-Any scene is considered an item in itself so 1 blender file can be exported into multiple items. Item will be exported according to scene's name with forward slashes ('/') taken into account.
+Any scene is considered an item in itself so 1 blender file can be exported into multiple items. Item will be exported according to scene's name with forward slashes ('/') taken into account. If you don't want a scene to be exported as an Item (for instance if your scene is a test one) you can un-check all export checkboxes (see below).
 
 
 Settings :
@@ -33,12 +33,16 @@ Create :
 Settings :
 - sidebar > Trackmania > Mesh
 
+_Any mesh created through standard blender buttons will also be exported. You can change their type through the same settings panel._
+
 ## Spawn Point
 
-For Waypoint items only. Only position and orientation of mesh are taken into account during export.
+Must be unique. For Waypoint items only. Only position and orientation of mesh are taken into account during export.
 
 Create :
 - top bar > Add > Trackmania > Add Spawn Point
+
+_Any mesh (whose trackmania type is "Spawn") created through standard blender buttons will also be exported as spawn point. See Mesh/Trigger settings above._
 
 ## Lights
 
@@ -47,12 +51,16 @@ Only Spot/Point lights can be exported.
 Create :
 - top bar > Add > Trackmania > Add Spot/Point Light
 
+_Any spot/point light created through standard blender buttons will also be exported_
+
 ## Pivots
 
 They are exported in alphabetical order!
 
 Create :
 - top bar > Add > Trackmania > Add Pivot
+
+_Any empty blender object can also be set pivot: sidebar > Trackmania > Pivot > Is Pivot_
 
 ## Materials
 
@@ -61,5 +69,5 @@ Define how blender material will be translated into TM materials during export.
 Settings :
 - side pannels > Material Properties > Trackmania Material
 
-Load default materials library :
+You can create all the material you want, then setup how you want them exported. You can also use default materials (includes roads, platforms, and deco-hill) by loading it:
 - sidebar > Trackmania > Material Library > Load Material Library
