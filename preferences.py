@@ -30,7 +30,7 @@ class TrackmaniaAddonPreferences(AddonPreferences):
     author_name: StringProperty(
         name='Author Name',
         description='Author name used when exporting items',
-        default='voblivion'
+        default=''
     )
     
     def draw(self, context):
