@@ -43,6 +43,8 @@ Create :
 
 ## Pivots
 
+They are exported in alphabetical order!
+
 Create :
 - top bar > Add > Trackmania > Add Pivot
 
