@@ -11,6 +11,7 @@ from bpy.props import (
     EnumProperty,
     FloatProperty,
     PointerProperty,
+    StringProperty,
 )
 from itertools import chain
 from math import radians, sqrt, degrees
@@ -188,13 +189,17 @@ class SCENE_OT_TrackmaniaRenderIcon(Operator):
     save: BoolProperty(name='Save', default=True)
     
     @staticmethod
-    def get_export_path(context):
+    def get_export_path(context, scene):
         base_path = get_base_export_path(context)
-        sub_path = Path(context.scene.name + '.tga')
+        sub_path = Path(scene.name + '.tga')
         return base_path / sub_path.parents[0] / 'Icon' / sub_path.name
     
+    scene: StringProperty(
+        default=''
+    )
+    
     def execute(self, context):
-        scene = context.scene
+        scene = context.scene if self.scene == '' else context.blend_data.scenes[self.scene]
         item_settings = scene.trackmania_item
         
         # Ensure scene render parameters are correct
@@ -249,7 +254,7 @@ class SCENE_OT_TrackmaniaRenderIcon(Operator):
         scene.collection.objects.link(light_object)
         
         # Change render path
-        export_path = self.get_export_path(context)
+        export_path = self.get_export_path(context, scene)
         export_path.parents[0].mkdir(parents=True, exist_ok=True)
         prev_render_path = scene.render.filepath
         scene.render.filepath = str(export_path)
@@ -277,13 +282,17 @@ class SCENE_OT_TrackmaniaExportMesh(Operator):
     bl_options = {'REGISTER'}
     
     @staticmethod
-    def get_export_path(context):
+    def get_export_path(context, scene):
         base_path = get_base_export_path(context)
-        sub_path = Path(context.scene.name + '.fbx')
+        sub_path = Path(scene.name + '.fbx')
         return base_path / sub_path.parents[0] / 'Mesh' / sub_path.name
     
+    scene: StringProperty(
+        default=''
+    )
+    
     def execute(self, context):
-        scene = context.scene
+        scene = context.scene if self.scene == '' else context.blend_data.scenes[self.scene]
         
         old_object_names = []
         prev_socket_start = context.blend_data.objects.get('_socket_start')
@@ -297,9 +306,13 @@ class SCENE_OT_TrackmaniaExportMesh(Operator):
                 old_object_names.append((object, object.name))
                 object.name = object.data.trackmania_mesh.get_export_name(object.name)
         
-        export_path = self.get_export_path(context)
+        export_path = self.get_export_path(context, scene)
         export_path.parents[0].mkdir(parents=True, exist_ok=True)
+        
+        active_scene = context.scene
+        context.window.scene = scene
         bpy.ops.export_scene.fbx(filepath=str(export_path), object_types={'MESH', 'LIGHT'}, axis_up='Y')
+        context.window.scene = active_scene
         
         for entry in old_object_names:
             entry[0].name = entry[1]
@@ -313,18 +326,22 @@ class SCENE_OT_TrackmaniaExportMeshParams(Operator):
     bl_options = {'REGISTER'}
     
     @staticmethod
-    def get_export_path(context):
+    def get_export_path(context, scene):
         base_path = get_base_export_path(context)
-        sub_path = Path(context.scene.name + '.MeshParams.xml')
+        sub_path = Path(scene.name + '.MeshParams.xml')
         return base_path / sub_path.parents[0] / 'Mesh' / sub_path.name
     
+    scene: StringProperty(
+        default=''
+    )
+    
     def execute(self, context):
-        scene = context.scene
+        scene = context.scene if self.scene == '' else context.blend_data.scenes[self.scene]
         item_settings = scene.trackmania_item
         
-        export_path = self.get_export_path(context)
+        export_path = self.get_export_path(context, scene)
         export_path.parents[0].mkdir(parents=True, exist_ok=True)
-        mesh_export_path = SCENE_OT_TrackmaniaExportMesh.get_export_path(context)
+        mesh_export_path = SCENE_OT_TrackmaniaExportMesh.get_export_path(context, scene)
         
         xml_mesh_params = et.Element('MeshParams')
         xml_mesh_params.set('MeshType', 'Static')
@@ -360,16 +377,20 @@ class SCENE_OT_TrackmaniaExportItem(Operator):
     bl_options = {'REGISTER'}
     
     @staticmethod
-    def get_export_path(context):
-        return get_base_export_path(context) / (context.scene.name + '.Item.xml')
+    def get_export_path(context, scene):
+        return get_base_export_path(context) / (scene.name + '.Item.xml')
+    
+    scene: StringProperty(
+        default=''
+    )
     
     def execute(self, context):
-        scene = context.scene
+        scene = context.scene if self.scene == '' else context.blend_data.scenes[self.scene]
         item_settings = scene.trackmania_item
         
-        export_path = self.get_export_path(context)
+        export_path = self.get_export_path(context, scene)
         export_path.parents[0].mkdir(parents=True, exist_ok=True)
-        mesh_params_export_path = SCENE_OT_TrackmaniaExportMeshParams.get_export_path(context)
+        mesh_params_export_path = SCENE_OT_TrackmaniaExportMeshParams.get_export_path(context, scene)
         
         # Item
         xml_item = et.Element('Item')
@@ -450,12 +471,16 @@ class SCENE_OT_TrackmaniaNadeoImporter(Operator):
     bl_label = 'Call Nadeo Importer'
     bl_options = {'REGISTER'}
     
+    scene: StringProperty(
+        default=''
+    )
+    
     def execute(self, context):
-        scene = context.scene
+        scene = context.scene if self.scene == '' else context.blend_data.scenes[self.scene]
         item_settings = scene.trackmania_item
         nadeo_importer_exe = str(Path(get_preferences(context).install_dir, 'NadeoImporter.exe'))
         work_dir_path = get_work_dir_path(context)
-        item_path = str(SCENE_OT_TrackmaniaExportItem.get_export_path(context))
+        item_path = str(SCENE_OT_TrackmaniaExportItem.get_export_path(context, scene))
         relative_item_path = os.path.relpath(item_path, work_dir_path)
         process = subprocess.Popen([nadeo_importer_exe, 'Item', relative_item_path])
         print([nadeo_importer_exe, 'Item', relative_item_path])
@@ -466,18 +491,34 @@ class SCENE_OT_TrackmaniaExport(Operator):
     bl_label = 'All'
     bl_options = {'REGISTER'}
     
+    scene: StringProperty(
+        default=''
+    )
+    
     def execute(self, context):
-        item_settings = context.scene.trackmania_item
+        scene = context.scene if self.scene == '' else context.blend_data.scenes[self.scene]
+        item_settings = scene.trackmania_item
         
         if item_settings.export_mesh:
-            bpy.ops.trackmania.export_mesh()
+            bpy.ops.trackmania.export_mesh(scene=scene.name)
         if item_settings.export_mesh_params:
-            bpy.ops.trackmania.export_mesh_params()
+            bpy.ops.trackmania.export_mesh_params(scene=scene.name)
         if item_settings.export_icon:
-            bpy.ops.trackmania.render_icon(save=True)
+            bpy.ops.trackmania.render_icon(scene=scene.name, save=True)
         if item_settings.export_item:
-            bpy.ops.trackmania.export_item()
-        bpy.ops.trackmania.nadeo_importer()
+            bpy.ops.trackmania.export_item(scene=scene.name)
+        if item_settings.export_nadeo:
+            bpy.ops.trackmania.nadeo_importer(scene=scene.name)
+        return {'FINISHED'}
+
+class SCENE_OT_TrackmaniaExportAll(Operator):
+    bl_idname = 'trackmania.export_all'
+    bl_label = 'All'
+    bl_options = {'REGISTER'}
+    
+    def execute(self, context):
+        for scene in context.blend_data.scenes:
+            bpy.ops.trackmania.export(scene=scene.name)
         return {'FINISHED'}
 
 class VIEW3D_PT_TrackmaniaItem(Panel):
@@ -536,9 +577,9 @@ class VIEW3D_PT_TrackmaniaItem(Panel):
         category.row().prop(item_settings, 'export_nadeo')
         
         row = category.row()
-        row.operator(SCENE_OT_TrackmaniaExport.bl_idname, text='Current Scene/Item')
+        row.operator(SCENE_OT_TrackmaniaExport.bl_idname, text='Export Current Item')
         row = category.row()
-        row.operator(SCENE_OT_TrackmaniaExport.bl_idname, text='All Scenes/Items')
+        row.operator(SCENE_OT_TrackmaniaExportAll.bl_idname, text='Export All Items')
 
 
 
@@ -552,6 +593,7 @@ classes = (
     SCENE_OT_TrackmaniaExportItem,
     SCENE_OT_TrackmaniaNadeoImporter,
     SCENE_OT_TrackmaniaExport,
+    SCENE_OT_TrackmaniaExportAll,
     VIEW3D_PT_TrackmaniaItem,
 )
 
