@@ -21,9 +21,18 @@ Any scene is considered an item in itself so 1 blender file can be exported into
 Settings :
 - sidebar > Trackmania > Item
 
-
 Export :
 - sidebar > Trackmania > Item > Export > Current Scene/Item
+
+## Icon
+
+When exporting Item you have the option to generate an Icon for it (alternatively you can place your own in appropriate export folder).
+
+Make sure you also set a background color to ensure scene is correctly lit: World Properties > New World > Surface > Color
+
+You can also add your own directional (avoid Spot/Point Lights, else they will be exported).
+
+_Still WIP, will expose properties to customize it in the future._
 
 ## Mesh / Trigger
 
