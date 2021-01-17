@@ -14,6 +14,8 @@ To edit item settings, in Object Mode open "Item" panel in "Trackmania" sidebar.
 
 On the same panel you can them use "Export > Current Scene/Item" to export/import item into Trackmania.
 
+If Item is a Waypoint, set its type : "Trackmania" sidebar > "Item" panel > "Other" section > Waypoint.  
+
 ## Mesh / Trigger
 
 To create a new Mesh/Trigger, use action "Add > Trackmania > Add Mesh/Trigger" in top bar (Object mode only).
@@ -22,8 +24,9 @@ You can also create a standard blender mesh and edit it's type from "Mesh" panel
 
 ## Spawn Point
 
-A mesh type can also be set to "Spawn Point" (or added from same "Trackmania" menu in top bar).
-When doing so, only position/orientation of object is considered during export.
+For Waypoint items only.
+
+A mesh type can also be set to "Spawn Point". When doing so, only position/orientation of object is considered during export.
 
 Best is to create Spawn Point from "Add > Trackmania > Add Spawn Point" in top bar as it creates a model to easily visualize where car will spawn.
 
@@ -33,4 +36,4 @@ Only Spot/Point lights can be exported, which you can create either through blen
 
 ## Pivots
 
-Add an empty object.
+Add an empty object and set "Is Pivot" in: "Trackmania" sidebar > "Pivot" panel.
