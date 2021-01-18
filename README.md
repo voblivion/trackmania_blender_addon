@@ -1,3 +1,7 @@
+# Bug reporting & Feature suggestions
+- Report issues through github interface (top bar)
+- Feel free to suggest any feature/improvement in the form of a pull-request or via email (voblivion <at> hotmail <dot> fr)
+
 # How to install
 
 - Ensure blender version is 2.9 or above
