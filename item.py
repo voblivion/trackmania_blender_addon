@@ -11,6 +11,7 @@ from bpy.props import (
     EnumProperty,
     FloatProperty,
     FloatVectorProperty,
+    IntProperty,
     PointerProperty,
     StringProperty,
 )
@@ -197,7 +198,6 @@ class SCENE_PG_TrackmaniaItem(PropertyGroup):
         update=update_icon_settings
     )
 
-
 def get_preferences(context):
     return context.preferences.addons['Trackmania'].preferences
 
@@ -306,7 +306,11 @@ class SCENE_OT_TrackmaniaRenderIcon(Operator):
         prev_render_path = scene.render.filepath
         scene.render.filepath = str(export_path)
         
-        bpy.ops.render.render(scene=scene.name, write_still=self.save)
+        try:
+            bpy.ops.render.render(scene=scene.name, write_still=self.save)
+            self.report({'INFO'}, 'Icon render completed successfully.')
+        except Exception as e:
+            self.report({'ERROR', 'Unknown error while rendering Icon, check console for more info.'})
         
         # Restore render path
         scene.render.filepath = prev_render_path
@@ -321,7 +325,6 @@ class SCENE_OT_TrackmaniaRenderIcon(Operator):
             if custom_camera_object is not None:
                 scene.camera = custom_camera_object
         
-        self.report({'INFO'}, 'Export {} done ({})'.format(self.bl_label, export_path))
         return {'FINISHED'}
 
 class SCENE_OT_TrackmaniaExportMesh(Operator):
@@ -366,8 +369,12 @@ class SCENE_OT_TrackmaniaExportMesh(Operator):
         
         active_scene = context.scene
         context.window.scene = scene
-        bpy.ops.export_scene.fbx(filepath=str(export_path), object_types={'MESH', 'LIGHT'}, axis_up='Y')
-        context.window.scene = active_scene
+        try:
+            bpy.ops.export_scene.fbx(filepath=str(export_path), object_types={'MESH', 'LIGHT'}, axis_up='Y')
+            context.window.scene = active_scene
+            self.report({'INFO'}, 'Mesh export completed successfully.')
+        except Exception as e:
+            self.report({'ERROR', 'Unknown error while exporting Mesh, check console for more info.'})
         
         if start_object is not None:
             tmp_mesh = start_object.data
@@ -377,7 +384,6 @@ class SCENE_OT_TrackmaniaExportMesh(Operator):
         for entry in old_object_names:
             entry[0].name = entry[1]
         
-        self.report({'INFO'}, 'Export {} done ({})'.format(self.bl_label, export_path))
         return {'FINISHED'}
 
 class SCENE_OT_TrackmaniaExportMeshParams(Operator):
@@ -424,10 +430,13 @@ class SCENE_OT_TrackmaniaExportMeshParams(Operator):
             color = format((color[0] << 16) + (color[1] << 8) + color[2], 'x')
             xml_material.set('Color', color)
         
-        file = open(str(export_path), 'w')
-        file.write(xml.dom.minidom.parseString(et.tostring(xml_mesh_params)).toprettyxml())
+        try:
+            file = open(str(export_path), 'w')
+            file.write(xml.dom.minidom.parseString(et.tostring(xml_mesh_params)).toprettyxml())
+            self.report({'INFO'}, 'Mesh Params export completed successfully.')
+        except Exception as e:
+            self.report({'ERROR', 'Unknown error while exporting Mesh Params, check console for more info.'})
         
-        self.report({'INFO'}, 'Export {} done ({})'.format(self.bl_label, export_path))
         return {'FINISHED'}
     
 
@@ -520,10 +529,13 @@ class SCENE_OT_TrackmaniaExportItem(Operator):
                     xml_light.set('SpotOuterAngle', str(degrees(light.spot_size)))
                     xml_light.set('SpotInnerAngle', str(sqrt(1-light.spot_blend) * degrees(light.spot_size)))
         
-        file = open(str(export_path), 'w')
-        file.write(xml.dom.minidom.parseString(et.tostring(xml_item)).toprettyxml())
+        try:
+            file = open(str(export_path), 'w')
+            file.write(xml.dom.minidom.parseString(et.tostring(xml_item)).toprettyxml())
+            self.report({'INFO'}, 'Item Export completed successfully.')
+        except Exception as e:
+            self.report({'ERROR', 'Unknown error while exporting Item, check console for more info.'})
         
-        self.report({'INFO'}, 'Export {} done ({})'.format(self.bl_label, export_path))
         return {'FINISHED'}
 
 class SCENE_OT_TrackmaniaNadeoImporter(Operator):
@@ -542,9 +554,35 @@ class SCENE_OT_TrackmaniaNadeoImporter(Operator):
         work_dir_path = get_work_dir_path(context)
         item_path = str(SCENE_OT_TrackmaniaExportItem.get_export_path(context, scene))
         relative_item_path = os.path.relpath(item_path, work_dir_path)
-        process = subprocess.Popen([nadeo_importer_exe, 'Item', relative_item_path])
-        print([nadeo_importer_exe, 'Item', relative_item_path])
+        result = None
+        result_type = 'INFO'
+        try:
+            result = subprocess.check_output([nadeo_importer_exe, 'Item', relative_item_path])
+        except Exception as e:
+            result = e.output
+            result_type = 'ERROR_INVALID_CONTEXT'
+        result = result.decode('utf-8').split('\r\n', 1)[1].replace('\r', '')[:-1]
+        self.report({result_type}, result)
         return {'FINISHED'}
+
+def parse_operator_exception(exception):
+    subs0 = [('ERROR_INVALID_CONTEXT', part) for part in str(exception).split('Invalid Context Error: ')[1:]]
+    subs1 = []
+    for sub in subs0:
+        subs = sub[1].split('Invalid Input Error: ')
+        subs1.append((sub[0], subs[0]))
+        subs1.extend([('ERROR_INVALID_INPUT', part) for part in subs[1:]])
+    subs2 = []
+    for sub in subs1:
+        subs = sub[1].split('Error: ')
+        subs2.append((sub[0], subs[0]))
+        subs2.extend([('ERROR', part) for part in subs[1:]])
+    subs3 = []
+    for sub in subs2:
+        subs = sub[1].split('Undefined Type: ')
+        subs3.append((sub[0], subs[0]))
+        subs3.extend([('ERROR', part) for part in subs[1:]])
+    return [(type, msg[:-1]) for type, msg in subs3]
 
 class SCENE_OT_TrackmaniaExport(Operator):
     bl_idname = 'trackmania.export'
@@ -555,20 +593,36 @@ class SCENE_OT_TrackmaniaExport(Operator):
         default=''
     )
     
+    def call_export(self, export_op, item_settings, **kwargs):
+        try:
+            export_op(**kwargs)
+            return 0
+        except Exception as e:
+            errors = parse_operator_exception(e)
+            for error in errors:
+                self.report({error[0]}, error[1])
+            return len(errors)
+    
     def execute(self, context):
         scene = context.scene if self.scene == '' else context.blend_data.scenes[self.scene]
         item_settings = scene.trackmania_item
         
+        errors = 0
+        
         if item_settings.export_mesh:
-            bpy.ops.trackmania.export_mesh(scene=scene.name)
-        if item_settings.export_mesh_params:
-            bpy.ops.trackmania.export_mesh_params(scene=scene.name)
+            errors += self.call_export(bpy.ops.trackmania.export_mesh, item_settings, scene=scene.name)
         if item_settings.export_icon:
-            bpy.ops.trackmania.render_icon(scene=scene.name, save=True)
+            errors += self.call_export(bpy.ops.trackmania.render_icon, item_settings, scene=scene.name, save=True)
         if item_settings.export_item:
-            bpy.ops.trackmania.export_item(scene=scene.name)
+            errors += self.call_export(bpy.ops.trackmania.export_item, item_settings, scene=scene.name)
         if item_settings.export_nadeo:
-            bpy.ops.trackmania.nadeo_importer(scene=scene.name)
+            errors += self.call_export(bpy.ops.trackmania.nadeo_importer, item_settings, scene=scene.name)
+        
+        if errors == 0:
+            self.report({'INFO'}, 'Export completed successfully')
+        else:
+            self.report({'WARNING'}, '{} errors encountered while completing export process.'.format(errors))
+            
         return {'FINISHED'}
 
 class SCENE_OT_TrackmaniaExportAll(Operator):
@@ -656,6 +710,7 @@ classes = (
     SCENE_OT_TrackmaniaExportMeshParams,
     SCENE_OT_TrackmaniaRenderIcon,
     SCENE_OT_TrackmaniaExportItem,
+    TrackmaniaExportErrors,
     SCENE_OT_TrackmaniaNadeoImporter,
     SCENE_OT_TrackmaniaExport,
     SCENE_OT_TrackmaniaExportAll,
