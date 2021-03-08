@@ -282,6 +282,7 @@ class SCENE_OT_TrackmaniaRenderIcon(Operator):
         for object in scene.objects:
             if object.type == 'MESH' and not object.data.trackmania_mesh.render_on_icon:
                 if not object.hide_render:
+                    print(object)
                     invisible_objects.append(object)
                     object.hide_render = True
         
@@ -318,6 +319,10 @@ class SCENE_OT_TrackmaniaRenderIcon(Operator):
         # Remove light
         if sun_object is not None:
             bpy.data.objects.remove(sun_object)
+        
+        # Reset previously hidden objects
+        for object in invisible_objects:
+            object.hide_render = False
         
         # Remove created camera and reset previous one
         if True or custom_camera_object is None or self.force_default_camera:
@@ -433,7 +438,7 @@ class SCENE_OT_TrackmaniaExportMeshParams(Operator):
         try:
             file = open(str(export_path), 'w')
             file.write(xml.dom.minidom.parseString(et.tostring(xml_mesh_params)).toprettyxml())
-            self.report({'INFO'}, 'Mesh Params export completed successfully.')
+            self.report({'INFO'}, 'Mesh Params export completed successfully.\n{}'.format(export_path))
         except Exception as e:
             self.report({'ERROR', 'Unknown error while exporting Mesh Params, check console for more info.'})
         
@@ -611,6 +616,9 @@ class SCENE_OT_TrackmaniaExport(Operator):
         
         if item_settings.export_mesh:
             errors += self.call_export(bpy.ops.trackmania.export_mesh, item_settings, scene=scene.name)
+            
+        if item_settings.export_mesh_params:
+            errors += self.call_export(bpy.ops.trackmania.export_mesh_params, item_settings, scene=scene.name)
         if item_settings.export_icon:
             errors += self.call_export(bpy.ops.trackmania.render_icon, item_settings, scene=scene.name, save=True)
         if item_settings.export_item:
@@ -710,7 +718,6 @@ classes = (
     SCENE_OT_TrackmaniaExportMeshParams,
     SCENE_OT_TrackmaniaRenderIcon,
     SCENE_OT_TrackmaniaExportItem,
-    TrackmaniaExportErrors,
     SCENE_OT_TrackmaniaNadeoImporter,
     SCENE_OT_TrackmaniaExport,
     SCENE_OT_TrackmaniaExportAll,
