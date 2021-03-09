@@ -65,6 +65,29 @@ def get_library_materials(context):
         library_materials = [context.blend_data.materials[name] for name in library_material_names]
     return library_materials
 
+def get_standard_curves(context):
+    to_load_curve_names = [
+        '00_01',
+        '00_11',
+        '00_21',
+        '01_12',
+        '02_11',
+        '10_12',
+        '11_11',
+        '11_12',
+        '12_11',
+        '12_32',
+        '20_11',
+        '21_11',
+        '21_32',
+        '22_11',
+        '22_21',
+    ]
+    
+    with get_library(context) as (data_from, data_to):
+        data_to.curves = to_load_curve_names
+    
+
 class OBJECT_OT_TrackmaniaAddItem(Operator):
     bl_idname = 'object.trackmania_add_item'
     bl_label = 'Add Item (Scene)'
@@ -162,8 +185,18 @@ class MATERIAL_OT_TrackmaniaLoadMaterials(Operator):
         get_library_materials(context)
         return {'FINISHED'}
 
-class VIEW3D_PT_TrackmaniaMaterialLibrary(Panel):
-    bl_idname = 'VIEW3D_PT_TrackmaniaMaterialLibrary'
+class CURVE_OT_TrackmaniaLoadCurves(Operator):
+    bl_idname = 'object.trackmania_load_curves'
+    bl_label = 'Load Standard Curves'
+    bl_description = 'Copies standard curves into active scene'
+    bl_options = {'REGISTER'}
+    
+    def execute(self, context):
+        get_standard_curves(context)
+        return {'FINISHED'}
+
+class VIEW3D_PT_TrackmanialLibrary(Panel):
+    bl_idname = 'VIEW3D_PT_TrackmanialLibrary'
     bl_label = 'Material Library'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
@@ -171,7 +204,7 @@ class VIEW3D_PT_TrackmaniaMaterialLibrary(Panel):
     
     def draw(self, context):
         self.layout.operator(MATERIAL_OT_TrackmaniaLoadMaterials.bl_idname)
-    
+        self.layout.operator(CURVE_OT_TrackmaniaLoadCurves.bl_idname)
 
 class VIEW3D_MT_TrackmaniaAdd(Menu):
     bl_idname = 'VIEW3D_MT_TrackmaniaAdd'
@@ -200,7 +233,8 @@ classes = (
     OBJECT_OT_TrackmaniaAddPivot,
     VIEW3D_MT_TrackmaniaAdd,
     MATERIAL_OT_TrackmaniaLoadMaterials,
-    VIEW3D_PT_TrackmaniaMaterialLibrary,
+    CURVE_OT_TrackmaniaLoadCurves,
+    VIEW3D_PT_TrackmanialLibrary,
 )
 
 def register():

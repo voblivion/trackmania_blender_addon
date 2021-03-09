@@ -15,7 +15,8 @@ from . import (
     part,
     material,
     item,
-    menu
+    menu,
+    surface
 )
 
 # HACK reload
@@ -25,8 +26,9 @@ part = importlib.reload(part)
 item = importlib.reload(item)
 material = importlib.reload(material)
 menu = importlib.reload(menu)
+surface = importlib.reload(surface)
 
-modules = [preferences, part, material, item, menu]
+modules = [preferences, part, material, item, menu, surface]
 
 def register():
     for module in modules:
