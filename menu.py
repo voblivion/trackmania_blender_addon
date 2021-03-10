@@ -65,24 +65,28 @@ def get_library_materials(context):
         library_materials = [context.blend_data.materials[name] for name in library_material_names]
     return library_materials
 
+library_curve_names = [
+    '00_01',
+    '00_11',
+    '00_21',
+    '01_12',
+    '02_11',
+    '10_12',
+    '11_11',
+    '11_12',
+    '12_11',
+    '12_32',
+    '20_11',
+    '21_11',
+    '21_32',
+    '22_11',
+    '22_21',
+]
 def get_standard_curves(context):
-    to_load_curve_names = [
-        '00_01',
-        '00_11',
-        '00_21',
-        '01_12',
-        '02_11',
-        '10_12',
-        '11_11',
-        '11_12',
-        '12_11',
-        '12_32',
-        '20_11',
-        '21_11',
-        '21_32',
-        '22_11',
-        '22_21',
-    ]
+    to_load_curve_names = list(filter(
+        lambda name: name not in context.blend_data.curves,
+        library_curve_names
+    ))
     
     with get_library(context) as (data_from, data_to):
         data_to.curves = to_load_curve_names
