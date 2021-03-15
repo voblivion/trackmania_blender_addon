@@ -640,12 +640,13 @@ class SCENE_OT_TrackmaniaExportAll(Operator):
     
     def execute(self, context):
         for scene in context.blend_data.scenes:
+            print('exporting {}'.format(scene.name))
             bpy.ops.trackmania.export(scene=scene.name)
         return {'FINISHED'}
 
-class VIEW3D_PT_TrackmaniaItem(Panel):
-    bl_idname = 'VIEW3D_PT_TrackmaniaItem'
-    bl_label = 'Item'
+class VIEW3D_PT_TrackmaniaItemSettings(Panel):
+    bl_idname = 'VIEW3D_PT_TrackmaniaItemSettings'
+    bl_label = 'Item Settings'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'Trackmania'
@@ -691,24 +692,31 @@ class VIEW3D_PT_TrackmaniaItem(Panel):
             category.prop(item_settings, 'icon_sun_color')
             category.prop(item_settings, 'icon_sun_offset_pitch')
             category.prop(item_settings, 'icon_sun_offset_yaw')
-        
-        # TODO : export buttons
-        category = layout.box()
-        category.label(text='Export')
-        row = category.row()
+
+class VIEW3D_PT_TrackmaniaItemExport(Panel):
+    bl_idname = 'VIEW3D_PT_TrackmaniaItemExport'
+    bl_label = 'Item Export'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'Trackmania'
+    
+    def draw(self, context):
+        layout = self.layout
+        item_settings = context.scene.trackmania_item
+    
+        row = layout.row()
         row.prop(item_settings, 'export_mesh')
         row.prop(item_settings, 'export_mesh_params')
-        row = category.row()
+        row = layout.row()
         row.prop(item_settings, 'export_icon')
         row.prop(item_settings, 'export_item')
-        category.row().prop(item_settings, 'export_nadeo')
+        layout.row().prop(item_settings, 'export_nadeo')
         
-        row = category.row()
+        row = layout.row()
         row.operator(SCENE_OT_TrackmaniaExport.bl_idname, text='Export Current Item')
-        row = category.row()
+        row = layout.row()
         row.operator(SCENE_OT_TrackmaniaExportAll.bl_idname, text='Export All Items')
-
-
+    
 
 
 
@@ -721,7 +729,8 @@ classes = (
     SCENE_OT_TrackmaniaNadeoImporter,
     SCENE_OT_TrackmaniaExport,
     SCENE_OT_TrackmaniaExportAll,
-    VIEW3D_PT_TrackmaniaItem,
+    VIEW3D_PT_TrackmaniaItemSettings,
+    VIEW3D_PT_TrackmaniaItemExport,
 )
 
 def register():
