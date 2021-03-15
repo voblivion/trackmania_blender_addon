@@ -29,8 +29,8 @@ import importlib
 border = importlib.reload(border)
 
 # Properties
-class OBJECT_PG_BorderSettings(PropertyGroup):
-    bl_idname = 'OBJECT_PG_BorderSettings'
+class SCENE_PG_BorderSettings(PropertyGroup):
+    bl_idname = 'SCENE_PG_BorderSettings'
     
     flip: BoolProperty(
         name='Flip?',
@@ -57,8 +57,9 @@ def draw_border(layout, border, name):
     row.prop(border, 'curve', text='')
     row.prop(border, 'flip')
 
-def generate_surface_screw(context, object):
-    settings = object.trackmania_surface_settings
+def generate_surface_screw(context):
+    scene = context.scene
+    settings = scene.trackmania_surface_settings
     print('generating screw surface')
     pass
 
@@ -70,8 +71,10 @@ def create_pivot(context, name):
     return obj
     
 
-def generate_surface_connector(context, object):
-    settings = object.trackmania_surface_settings
+def generate_surface_connector(context):
+    scene = context.scene
+    settings = scene.trackmania_surface_settings
+    object = settings.surface
     
     # East border
     print('East border')
@@ -184,7 +187,7 @@ def generate_surface_connector(context, object):
             faces.extend([((i - 1) * (n * 2) + j, i * (n * 2) + j, i * (n * 2) + j + 1, (i - 1) * (n * 2) + j + 1) for j in range(n - 1)])
             faces.extend([((i - 1) * (n * 2) + j + n, (i - 1) * (n * 2) + j + n + 1, i * (n * 2) + j + n + 1, i * (n * 2) + j + n) for j in range(n - 1)])
             faces.append(((i-1)*n*2,(i-1)*n*2+n,i*n*2+n,i*n*2))
-            faces.append(((i-1)*n*2+n-1,i*n*2+n-1,i*n*2+n+n-1,(i-1)*n*2+n+n-1))
+            faces.append(((i-1)*n*2+n+n-1,(i-1)*n*2+n-1,i*n*2+n-1,i*n*2+n+n-1))
         
         if i == len(east_points) - 1:
             faces.extend([(i*n*2+j, i*n*2+j+n, i*n*2+j+n+1, i*n*2+j+1) for j in range(n - 1)])
@@ -195,7 +198,7 @@ def generate_surface_connector(context, object):
     offset = Vector((0, 0, -min(z_corners)))
     for vertice in vertices: vertice += offset
     
-    # Replace current object mesh
+    # Replace current surface mesh
     print('Replace mesh')
     mesh = bpy.data.meshes.new('Surface')
     mesh.from_pydata(vertices, [], faces)
@@ -249,8 +252,11 @@ def generate_surface_connector(context, object):
             face.material_index = 2
             for vertex_id, loop_id in zip(face.vertices, face.loop_indices):
                 vertex = mesh.vertices[vertex_id]
+                p = 0
+                if vertex_id % n != 0:
+                    p = 1
                 z = 0
-                if vertex_id % 2 == 0:
+                if ((vertex_id + p)/n) % 2 == p:
                     z = settings.height
                 uv_base_material.data[loop_id].uv = (vertex.co[0] / 32, z / 32)
     for j in range(n-1):
@@ -317,19 +323,32 @@ def generate_surface_connector(context, object):
                 y = 0.0 + margin + (vertex.co[0] / east_border.length) * (0.5 - 2 * margin)
                 uv_lightmap.data[loop_id].uv = (x, y)
     
+    # Set Item settings
+    print('COUCOU')
+    scene.trackmania_item.ghost_mode = True
+    scene.trackmania_item.fly_step = 8
+    scene.trackmania_item.grid_horizontal_step = 32
+    scene.trackmania_item.grid_vertical_step = 8
+    
 
-def generate_surface(context, object):
-    settings = object.trackmania_surface_settings
+def generate_surface(context):
+    scene = context.scene
+    settings = scene.trackmania_surface_settings
+    if settings.surface is None:
+        mesh = context.blend_data.meshes.new(scene.name)
+        object = context.blend_data.objects.new(scene.name, mesh)
+        scene.collection.objects.link(object)
+        settings.surface = object
     
     if settings.surface_type == 'SCREW':
-        return generate_surface_screw(context, object)
+        return generate_surface_screw(context)
     elif settings.surface_type == 'CONNECTOR':
-        return generate_surface_connector(context, object)
+        return generate_surface_connector(context)
     
     return 'Surface type is None'
 
-class OBJECT_PG_SurfaceSettings(PropertyGroup):
-    bl_idname = 'OBJECT_PG_SurfaceSettings'
+class SCENE_PG_SurfaceSettings(PropertyGroup):
+    bl_idname = 'SCENE_PG_SurfaceSettings'
     
     def __init__(self):
         super().__init__()
@@ -423,33 +442,34 @@ class OBJECT_PG_SurfaceSettings(PropertyGroup):
     )
     
     border_0: PointerProperty(
-        type=OBJECT_PG_BorderSettings,
+        type=SCENE_PG_BorderSettings,
         name='Border 0',
         description='Border 0 of generated surface',
         update=update
     )
     
     border_1: PointerProperty(
-        type=OBJECT_PG_BorderSettings,
+        type=SCENE_PG_BorderSettings,
         name='Border 1',
         description='Border 1 of generated surface',
         update=update
     )
     
     border_2: PointerProperty(
-        type=OBJECT_PG_BorderSettings,
+        type=SCENE_PG_BorderSettings,
         name='Border 2',
         description='Border 2 of generated surface',
         update=update
     )
     
     border_3: PointerProperty(
-        type=OBJECT_PG_BorderSettings,
+        type=SCENE_PG_BorderSettings,
         name='Border 3',
         description='Border 3 of generated surface',
         update=update
     )
     
+    surface: PointerProperty(type=Object)
     pivot_0: PointerProperty(type=Object)
     pivot_1: PointerProperty(type=Object)
     pivot_2: PointerProperty(type=Object)
@@ -475,11 +495,10 @@ class VIEW3D_OT_UpdateActiveSurface(Operator):
     
     @classmethod
     def poll(cls, context):
-        return context.active_object is not None and context.active_object.type == 'MESH' and context.object.mode == 'OBJECT'
+        return True or context.object.mode == 'OBJECT'
     
     def execute(self, context):
-        object = context.active_object
-        fail_reason = generate_surface(context, object)
+        fail_reason = generate_surface(context)
         
         if fail_reason is not None:
             self.report({'ERROR'}, fail_reason)
@@ -495,7 +514,7 @@ class VIEW3D_PT_TM_Surface(Panel):
     
     @classmethod
     def poll(cls, context):
-        return context.active_object is not None and context.active_object.type == 'MESH' and context.object.mode == 'OBJECT'
+        return True or context.object.mode == 'OBJECT'
     
     def draw(self, context):
         pass
@@ -510,7 +529,7 @@ class VIEW3D_PT_TM_ActiveSurface(Panel):
     
     @classmethod
     def poll(cls, context):
-        return context.active_object is not None and context.active_object.type == 'MESH' and context.object.mode == 'OBJECT'
+        return True or context.object.mode == 'OBJECT'
     
     def draw_common_settings(self, layout, settings):
         common = layout.column()
@@ -559,7 +578,7 @@ class VIEW3D_PT_TM_ActiveSurface(Panel):
     
     def draw(self, context):
         layout = self.layout
-        settings = context.active_object.trackmania_surface_settings
+        settings = context.scene.trackmania_surface_settings
         
         layout.prop(settings, 'surface_type')
         
@@ -576,8 +595,8 @@ class VIEW3D_PT_TM_ActiveSurface(Panel):
             
 
 classes = (
-    OBJECT_PG_BorderSettings,
-    OBJECT_PG_SurfaceSettings,
+    SCENE_PG_BorderSettings,
+    SCENE_PG_SurfaceSettings,
     VIEW3D_OT_UpdateActiveSurface,
     VIEW3D_PT_TM_Surface,
     VIEW3D_PT_TM_ActiveSurface
@@ -587,9 +606,9 @@ def register():
     for cls in classes:
         bpy.utils.register_class(cls)
     
-    bpy.types.Object.trackmania_surface_settings = PointerProperty(type=OBJECT_PG_SurfaceSettings)
+    bpy.types.Scene.trackmania_surface_settings = PointerProperty(type=SCENE_PG_SurfaceSettings)
 
 def unregister():
     for cls in classes:
         bpy.utils.unregister_class(cls)
-    del bpy.types.Object.trackmania_surface_settings
+    del bpy.types.Scene.trackmania_surface_settings
