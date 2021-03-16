@@ -77,7 +77,6 @@ def generate_surface_connector(context):
     object = settings.surface
     
     # East border
-    print('East border')
     if settings.border_0.curve is None:
         return 'East border is not set'
     if not border.is_valid_curve(settings.border_0.curve):
@@ -85,7 +84,6 @@ def generate_surface_connector(context):
     east_border = border.Border.from_curve(settings.border_0.curve, settings.border_0.flip)
     
     # West border
-    print('West border')
     if settings.border_1.curve is None:
         return 'West border is not set'
     if not border.is_valid_curve(settings.border_1.curve):
@@ -93,14 +91,12 @@ def generate_surface_connector(context):
     west_border = border.Border.from_curve(settings.border_1.curve, settings.border_1.flip)
     
     # East & West points
-    print('East & West points')
     east_west_subdivisions = settings.grid_subdivisions_flat if (east_border.is_flat and west_border.is_flat) else settings.grid_subdivisions_curved
     east_points = east_border.sample(east_west_subdivisions, settings.bezier_precision)
     west_points = west_border.sample(east_west_subdivisions, settings.bezier_precision)
     m = len(east_points)
     
     # North border
-    print('North border')
     if settings.border_2.curve is None:
         return 'North border is not set'
     if not border.is_valid_curve(settings.border_2.curve):
@@ -108,7 +104,6 @@ def generate_surface_connector(context):
     north_border = border.Border.from_curve(settings.border_2.curve, settings.border_2.flip)
     
     # South border
-    print('South border')
     if settings.border_3.curve is None:
         return 'South border is not set'
     if not border.is_valid_curve(settings.border_3.curve):
@@ -116,7 +111,6 @@ def generate_surface_connector(context):
     south_border = border.Border.from_curve(settings.border_3.curve, settings.border_3.flip)
     
     # North & South points
-    print('North & South points')
     north_south_subdivisions = settings.grid_subdivisions_flat if (north_border.is_flat and south_border.is_flat) else settings.grid_subdivisions_curved
     north_points = north_border.sample(north_south_subdivisions, settings.bezier_precision)
     south_points = south_border.sample(north_south_subdivisions, settings.bezier_precision)
@@ -124,7 +118,6 @@ def generate_surface_connector(context):
 
     
     # Validate borders join
-    print('Validate border join')
     epsilon = 0.001
     x_diff = abs(east_border.size.x - west_border.size.x)
     if x_diff > epsilon:
@@ -139,7 +132,6 @@ def generate_surface_connector(context):
         return 'Borders cannot join in altitude: {}'.format(z_diff)
     
     # Blend borders
-    print('Blend borders')
     vertices = []
     faces = []
     for i, east_point in enumerate(east_points):
@@ -193,13 +185,11 @@ def generate_surface_connector(context):
             faces.extend([(i*n*2+j, i*n*2+j+n, i*n*2+j+n+1, i*n*2+j+1) for j in range(n - 1)])
     
     # Offset Z so lowest corner at 0
-    print('Offset Z')
     z_corners = [0, east_border.size.y, east_border.size.y + north_border.size.y, south_border.size.y]
     offset = Vector((0, 0, -min(z_corners)))
     for vertice in vertices: vertice += offset
     
     # Replace current surface mesh
-    print('Replace mesh')
     mesh = bpy.data.meshes.new('Surface')
     mesh.from_pydata(vertices, [], faces)
     if settings.top_material is None:
@@ -230,7 +220,6 @@ def generate_surface_connector(context):
     settings.pivot_3.location = object.matrix_world @ mesh.vertices[2*n-1].co
     
     # Set Base Material's UV
-    print('Set Base Material UV')
     uv_base_material = mesh.uv_layers.new(name='BaseMaterial')
     mesh.uv_layers.active = uv_base_material
     for f in range(len(mesh.polygons)):
@@ -272,7 +261,6 @@ def generate_surface_connector(context):
                 uv_base_material.data[loop_id].uv = (vertex.co[1] / 32, z / 32)
     
     # Set Lightmap's UV
-    print('Set Lightmap UV')
     uv_lightmap = mesh.uv_layers.new(name='Lightmap')
     mesh.uv_layers.active = uv_lightmap
     margin = settings.lightmap_margin / 100 * 0.25 / 2
@@ -324,7 +312,6 @@ def generate_surface_connector(context):
                 uv_lightmap.data[loop_id].uv = (x, y)
     
     # Set Item settings
-    print('COUCOU')
     scene.trackmania_item.ghost_mode = True
     scene.trackmania_item.fly_step = 8
     scene.trackmania_item.grid_horizontal_step = 32
@@ -383,7 +370,7 @@ class SCENE_PG_SurfaceSettings(PropertyGroup):
         description='Number of subdivisions per grid unit when surface is flat (TM vanilla uses 4)',
         min=1,
         soft_max=16,
-        default=1,
+        default=4,
         update=update
     )
     
@@ -483,19 +470,190 @@ class SCENE_PG_SurfaceSettings(PropertyGroup):
         description='Whether or not border tangents must be preserved when ran across surface. Both opposit borders must have same tangents at their extremities for it to work'
     )
 
+class SCENE_PG_MultiSurfaceSettings(PropertyGroup):
+    borders: CollectionProperty(
+        type=SCENE_PG_BorderSettings,
+        name='Borders'
+    )
+    
+    selected_border: IntProperty()
+    
+    base_path: StringProperty(
+        name='Base Path'
+    )
+
+class VIEW3D_OT_MultiSurfaceBordersEdit(Operator):
+    bl_idname = 'scene.tm_multi_surface_borders_edit'
+    bl_label = 'Multi Surface - Edit Borders'
+    bl_options = {'REGISTER'}
+    
+    action = EnumProperty(
+        items=(
+            ('UP', 'Up', ''),
+            ('DOWN', 'Down', ''),
+            ('REMOVE', 'Remove', ''),
+            ('ADD', 'Add', '')
+        )
+    )
+    
+    @classmethod
+    def poll(cls, context):
+        return context.object is None or context.object.mode == 'OBJECT'
+    
+    def invoke(self, context, event):
+        scene = context.scene
+        settings = scene.trackmania_multi_surface
+        index = settings.selected_border
+        
+        try:
+            item = settings.borders[index]
+        except IndexError:
+            pass
+        else:
+            if self.action == 'DOWN' and index < len(settings.borders) - 1:
+                settings.borders.move(index, index+1)
+                settings.selected_border += 1
+            elif self.action == 'UP' and index >= 1:
+                settings.borders.move(index, index-1)
+                settings.selected_border -= 1
+            elif self.action == 'REMOVE':
+                settings.selected_border -= 1
+                settings.borders.remove(index)
+        
+        if self.action == 'ADD':
+            settings.borders.add()
+        
+        return {'FINISHED'}
+
+class VIEW3D_UL_MultiSurfaceItems(UIList):
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+        row = layout.row()
+        row.prop(item, 'curve')
+        row.prop(item, 'flip')
+    
+    def invoke(self, context, event):
+        pass
 
 
+class VIEW3D_OT_MultiSurfaceGenerate(Operator):
+    bl_idname = 'scene.tm_multi_surface_generate'
+    bl_label = 'Generate'
+    bl_options = {'REGISTER'}
+    
+    @classmethod
+    def poll(cls, context):
+        return context.object is None or context.object.mode == 'OBJECT'
+    
+    def execute(self, context):
+        scene = context.scene
+        settings = scene.trackmania_surface_settings
+        borders = scene.trackmania_multi_surface.borders
+        
+        eps = 0.001
+        
+        index0 = 100
+        prev0 = -1
+        for c0 in range(len(borders)):
+            index1= 100
+            prev1 = -1
+            for c1 in range(len(borders)):
+                index2 = 100
+                for c2 in range(len(borders)):
+                    for c3 in range(len(borders)):
+                        curve0 = borders[c0].curve
+                        curve1 = borders[c1].curve
+                        curve2 = borders[c2].curve
+                        curve3 = borders[c3].curve
+                        
+                        b0 = border.Border.from_curve(curve0, borders[c0].flip)
+                        b1 = border.Border.from_curve(curve1, borders[c1].flip)
+                        b2 = border.Border.from_curve(curve2, borders[c2].flip)
+                        b3 = border.Border.from_curve(curve3, borders[c3].flip)
+                        
+                        if abs(b0.length - b2.length) > eps or abs(b1.length - b3.length) > eps:
+                            continue
+
+                        z1 = 00 + b0.height
+                        z2 = z1 + b1.height
+                        z3 = z2 + b2.height
+                        z0 = z3 + b3.height
+                        if z1 < -eps or z2 < -eps or (z3 <= eps and (z1 > eps or z2 > eps)) or abs(z0) > eps:
+                            continue
+                        
+                        if z2 < eps and z1 + eps > z3:
+                            continue
+                        
+                        if prev0 != c0:
+                            index0 -= 1
+                            index1 = 99
+                            index2 = 99
+                        elif prev1 != c1:
+                            index1 -= 1
+                            index2 = 99
+                        else:
+                            index2 -= 1
+                        prev0 = c0
+                        prev1 = c1
+                        
+                        name = scene.trackmania_multi_surface.base_path + '{}-{}{}/{}-{}{}/{}-{}{}-{}{}'.format(
+                            index0,
+                            curve0.name, 'f' if borders[c0].flip else '',
+                            index1,
+                            curve1.name, 'f' if borders[c1].flip else '',
+                            index2,
+                            curve2.name, 'f' if borders[c2].flip else '',
+                            curve3.name, 'f' if borders[c3].flip else ''
+                        )
+                        scene.name = name
+                        
+                        settings.border_0.curve = curve0
+                        settings.border_0.flip = borders[c0].flip
+                        settings.border_2.curve = curve1
+                        settings.border_2.flip = borders[c1].flip
+                        settings.border_1.curve = curve2
+                        settings.border_1.flip = not borders[c2].flip
+                        settings.border_3.curve = curve3
+                        settings.border_3.flip = not borders[c3].flip
+                        print(name)
+                        bpy.ops.scene.tm_surface_update()
+                        bpy.ops.trackmania.export()
+        return {'FINISHED'}
+                        
+    
+    
+'''
+surfaces = []
+for c0 in range(len(curves)):
+    for c1 in range(len(curves)):
+        for c2 in range(len(curves)):
+            for c3 in range(len(curves)):
+                if curves[c0][3] != curves[c2][3] or curves[c1][3] != curves[c3][3]:
+                    continue
+
+                z1 = 00 + curves[c0][2] * (-1 if curves[c0][4] else 1)
+                z2 = z1 + curves[c1][2] * (-1 if curves[c1][4] else 1)
+                z3 = z2 + curves[c2][2] * (-1 if curves[c2][4] else 1)
+                z0 = z3 + curves[c3][2] * (-1 if curves[c3][4] else 1)
+                if z1 < 0 or z2 < 0 or z3 <= 0 or z0 != 0:
+                    continue
+                
+                if z2 == 0 and z1 > z3:
+                    continue
+                
+                print(len(surfaces), c0, c1, c2, c3)
+                surfaces.append((c0, c1, c2, c3))
+'''             
 
 # Panels
 
 class VIEW3D_OT_UpdateActiveSurface(Operator):
-    bl_idname = 'trackmania_surface.update_active'
+    bl_idname = 'scene.tm_surface_update'
     bl_label = 'Update'
     bl_options = {'REGISTER'}
     
     @classmethod
     def poll(cls, context):
-        return True or context.object.mode == 'OBJECT'
+        return context.object is None or context.object.mode == 'OBJECT'
     
     def execute(self, context):
         fail_reason = generate_surface(context)
@@ -514,10 +672,37 @@ class VIEW3D_PT_TM_Surface(Panel):
     
     @classmethod
     def poll(cls, context):
-        return True or context.object.mode == 'OBJECT'
+        return context.object is None or context.object.mode == 'OBJECT'
     
     def draw(self, context):
         pass
+
+class VIEW3D_PT_TM_MultiSurface(Panel):
+    bl_parent_id = VIEW3D_PT_TM_Surface.bl_idname
+    bl_idname = 'VIEW3D_PT_TM_MultiSurface'
+    bl_label = 'Multi Surface'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'Trackmania'
+    
+    def draw(self, context):
+        layout = self.layout
+        scene = context.scene
+        settings = scene.trackmania_multi_surface
+        
+        row = layout.row()
+        row.template_list('VIEW3D_UL_MultiSurfaceItems', '', settings, 'borders', settings, 'selected_border', rows=4)
+        
+        col = row.column(align=True)
+        col.operator(VIEW3D_OT_MultiSurfaceBordersEdit.bl_idname, text='+').action = 'ADD'
+        col.operator(VIEW3D_OT_MultiSurfaceBordersEdit.bl_idname, text='-').action = 'REMOVE'
+        col.separator()
+        col.operator(VIEW3D_OT_MultiSurfaceBordersEdit.bl_idname, icon='TRIA_UP', text='').action = 'UP'
+        col.operator(VIEW3D_OT_MultiSurfaceBordersEdit.bl_idname, icon='TRIA_DOWN', text='').action = 'DOWN'
+        
+        layout.prop(settings, 'base_path')
+        
+        layout.operator(VIEW3D_OT_MultiSurfaceGenerate.bl_idname)
 
 class VIEW3D_PT_TM_ActiveSurface(Panel):
     bl_parent_id = VIEW3D_PT_TM_Surface.bl_idname
@@ -529,7 +714,7 @@ class VIEW3D_PT_TM_ActiveSurface(Panel):
     
     @classmethod
     def poll(cls, context):
-        return True or context.object.mode == 'OBJECT'
+        return context.object is None or context.object.mode == 'OBJECT'
     
     def draw_common_settings(self, layout, settings):
         common = layout.column()
@@ -597,8 +782,13 @@ class VIEW3D_PT_TM_ActiveSurface(Panel):
 classes = (
     SCENE_PG_BorderSettings,
     SCENE_PG_SurfaceSettings,
+    SCENE_PG_MultiSurfaceSettings,
+    VIEW3D_OT_MultiSurfaceBordersEdit,
+    VIEW3D_OT_MultiSurfaceGenerate,
+    VIEW3D_UL_MultiSurfaceItems,
     VIEW3D_OT_UpdateActiveSurface,
     VIEW3D_PT_TM_Surface,
+    VIEW3D_PT_TM_MultiSurface,
     VIEW3D_PT_TM_ActiveSurface
 )
 
@@ -607,8 +797,10 @@ def register():
         bpy.utils.register_class(cls)
     
     bpy.types.Scene.trackmania_surface_settings = PointerProperty(type=SCENE_PG_SurfaceSettings)
+    bpy.types.Scene.trackmania_multi_surface = PointerProperty(type=SCENE_PG_MultiSurfaceSettings)
 
 def unregister():
     for cls in classes:
         bpy.utils.unregister_class(cls)
     del bpy.types.Scene.trackmania_surface_settings
+    del bpy.types.Scene.trackmania_multi_surface
