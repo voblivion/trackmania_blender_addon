@@ -29,6 +29,12 @@ bd_utils = importlib.reload(bd_utils)
 class SCENE_PG_TrackmaniaItem(PropertyGroup):
     bl_idname = 'SCENE_PG_TrackmaniaItem'
     
+    export_path: StringProperty(
+        name='Export Path',
+        description='Relative path (file included) it will be exported to',
+        default='BlenderItem'
+    )
+    
     export_mesh: BoolProperty(
         name='Mesh',
         description='If set, will export its mesh (fbx) when using export operations',
@@ -221,7 +227,7 @@ class SCENE_OT_TrackmaniaRenderIcon(Operator):
     @staticmethod
     def get_export_path(context, scene):
         base_path = get_base_export_path(context)
-        sub_path = Path(scene.name + '.tga')
+        sub_path = Path(scene.trackmania_item.export_path + '.tga')
         return base_path / sub_path.parents[0] / 'Icon' / sub_path.name
     
     scene: StringProperty(
@@ -340,7 +346,7 @@ class SCENE_OT_TrackmaniaExportMesh(Operator):
     @staticmethod
     def get_export_path(context, scene):
         base_path = get_base_export_path(context)
-        sub_path = Path(scene.name + '.fbx')
+        sub_path = Path(scene.trackmania_item.export_path + '.fbx')
         return base_path / sub_path.parents[0] / 'Mesh' / sub_path.name
     
     scene: StringProperty(
@@ -391,6 +397,15 @@ class SCENE_OT_TrackmaniaExportMesh(Operator):
         
         return {'FINISHED'}
 
+def gamma_correct(channel):
+    srgb = channel * 12.92 if channel < 0.0031308 else 1.055 * pow(channel, 1.0 / 2.4) - 0.055
+    return max(min(int(srgb * 255 + 0.5), 255), 0)
+
+def color_to_hex(color):
+    rgb = [color.r, color.g, color.b]
+    result = ''
+    return '{:02X}{:02X}{:02X}'.format(gamma_correct(color.r), gamma_correct(color.g), gamma_correct(color.b))
+
 class SCENE_OT_TrackmaniaExportMeshParams(Operator):
     bl_idname = 'trackmania.export_mesh_params'
     bl_label = 'Mesh Params'
@@ -399,7 +414,7 @@ class SCENE_OT_TrackmaniaExportMeshParams(Operator):
     @staticmethod
     def get_export_path(context, scene):
         base_path = get_base_export_path(context)
-        sub_path = Path(scene.name + '.MeshParams.xml')
+        sub_path = Path(scene.trackmania_item.export_path + '.MeshParams.xml')
         return base_path / sub_path.parents[0] / 'Mesh' / sub_path.name
     
     scene: StringProperty(
@@ -431,9 +446,7 @@ class SCENE_OT_TrackmaniaExportMeshParams(Operator):
             xml_material = et.SubElement(xml_materials, 'Material')
             xml_material.set('Name', material_name)
             xml_material.set('Link', material.trackmania_material.name)
-            color = [int(channel * 255) for channel in material.trackmania_material.color]
-            color = format((color[0] << 16) + (color[1] << 8) + color[2], 'x')
-            xml_material.set('Color', color)
+            xml_material.set('Color', color_to_hex(material.trackmania_material.color))
         
         try:
             file = open(str(export_path), 'w')
@@ -452,7 +465,7 @@ class SCENE_OT_TrackmaniaExportItem(Operator):
     
     @staticmethod
     def get_export_path(context, scene):
-        return get_base_export_path(context) / (scene.name + '.Item.xml')
+        return get_base_export_path(context) / (scene.trackmania_item.export_path + '.Item.xml')
     
     scene: StringProperty(
         default=''
@@ -704,13 +717,15 @@ class VIEW3D_PT_TrackmaniaItemExport(Panel):
         layout = self.layout
         item_settings = context.scene.trackmania_item
     
+        layout.prop(item_settings, 'export_path')
         row = layout.row()
         row.prop(item_settings, 'export_mesh')
         row.prop(item_settings, 'export_mesh_params')
         row = layout.row()
         row.prop(item_settings, 'export_icon')
         row.prop(item_settings, 'export_item')
-        layout.row().prop(item_settings, 'export_nadeo')
+        row = layout.row()
+        row.prop(item_settings, 'export_nadeo')
         
         row = layout.row()
         row.operator(SCENE_OT_TrackmaniaExport.bl_idname, text='Export Current Item')

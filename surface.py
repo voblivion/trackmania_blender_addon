@@ -15,12 +15,16 @@ from bpy.props import (
     CollectionProperty,
     EnumProperty,
     FloatProperty,
+    FloatVectorProperty,
     IntProperty,
     PointerProperty,
     StringProperty
 )
 from mathutils import Vector
 from random import random
+from math import (radians)
+from contextlib import redirect_stdout
+import io
 
 from . import border
 
@@ -470,24 +474,22 @@ class SCENE_PG_SurfaceSettings(PropertyGroup):
         description='Whether or not border tangents must be preserved when ran across surface. Both opposit borders must have same tangents at their extremities for it to work'
     )
 
-class SCENE_PG_MultiSurfaceSettings(PropertyGroup):
-    borders: CollectionProperty(
-        type=SCENE_PG_BorderSettings,
-        name='Borders'
+
+class SCENE_PG_MultiSurfaceMaterial(PropertyGroup):
+    bl_idname = 'SCENE_PG_MultiSurfaceMaterial'
+    
+    material: PointerProperty(
+        type=Material
     )
     
-    selected_border: IntProperty()
-    
-    base_path: StringProperty(
-        name='Base Path'
-    )
+    export_name: StringProperty(name='Export Name')
 
 class VIEW3D_OT_MultiSurfaceBordersEdit(Operator):
     bl_idname = 'scene.tm_multi_surface_borders_edit'
     bl_label = 'Multi Surface - Edit Borders'
     bl_options = {'REGISTER'}
     
-    action = EnumProperty(
+    action: EnumProperty(
         items=(
             ('UP', 'Up', ''),
             ('DOWN', 'Down', ''),
@@ -525,7 +527,9 @@ class VIEW3D_OT_MultiSurfaceBordersEdit(Operator):
         
         return {'FINISHED'}
 
-class VIEW3D_UL_MultiSurfaceItems(UIList):
+class VIEW3D_UL_MultiSurfaceBorderItems(UIList):
+    bl_idname = 'VIEW3D_UL_MultiSurfaceBorderItems'
+    
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         row = layout.row()
         row.prop(item, 'curve')
@@ -534,6 +538,81 @@ class VIEW3D_UL_MultiSurfaceItems(UIList):
     def invoke(self, context, event):
         pass
 
+class VIEW3D_OT_MultiSurfaceMaterialsEdit(Operator):
+    bl_idname = 'scene.tm_multi_surface_materials_edit'
+    bl_label = 'Multi Surface - Edit Materials'
+    bl_options = {'REGISTER'}
+    
+    action: EnumProperty(
+        items=(
+            ('UP', 'Up', ''),
+            ('DOWN', 'Down', ''),
+            ('REMOVE', 'Remove', ''),
+            ('ADD', 'Add', '')
+        )
+    )
+    
+    @classmethod
+    def poll(cls, context):
+        return context.object is None or context.object.mode == 'OBJECT'
+    
+    def invoke(self, context, event):
+        scene = context.scene
+        settings = scene.trackmania_multi_surface
+        index = settings.selected_material
+        
+        try:
+            item = settings.materials[index]
+        except IndexError:
+            pass
+        else:
+            if self.action == 'DOWN' and index < len(settings.materials) - 1:
+                settings.materials.move(index, index+1)
+                settings.selected_material += 1
+            elif self.action == 'UP' and index >= 1:
+                settings.materials.move(index, index-1)
+                settings.selected_material -= 1
+            elif self.action == 'REMOVE':
+                settings.selected_material -= 1
+                settings.materials.remove(index)
+        
+        if self.action == 'ADD':
+            settings.materials.add()
+        
+        return {'FINISHED'}
+
+class VIEW3D_UL_MultiSurfaceMaterialItems(UIList):
+    bl_idname = 'VIEW3D_UL_MultiSurfaceMaterialItems'
+    
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+        row = layout.row()
+        row.prop(item, 'material', text='')
+        row.prop(item, 'export_name', text='Name')
+    
+    def invoke(self, context, event):
+        pass
+
+class SCENE_PG_MultiSurfaceSettings(PropertyGroup):
+    bl_idname = 'SCENE_PG_MultiSurfaceSettings'
+    
+    borders: CollectionProperty(
+        type=SCENE_PG_BorderSettings,
+        name='Borders'
+    )
+    selected_border: IntProperty()
+    
+    materials: CollectionProperty(
+        type=SCENE_PG_MultiSurfaceMaterial
+    )
+    selected_material: IntProperty()
+    
+    simplify_threshold: FloatProperty(
+        name='Simplify Threshold',
+        description='Deviation angle within witch 2 adjacent faces are considered co-planar',
+        min=0,
+        max=180,
+        default=1
+    )
 
 class VIEW3D_OT_MultiSurfaceGenerate(Operator):
     bl_idname = 'scene.tm_multi_surface_generate'
@@ -548,101 +627,149 @@ class VIEW3D_OT_MultiSurfaceGenerate(Operator):
         scene = context.scene
         settings = scene.trackmania_surface_settings
         borders = scene.trackmania_multi_surface.borders
+        materials = scene.trackmania_multi_surface.materials
+        
+        simplify_threshold = radians(scene.trackmania_multi_surface.simplify_threshold)
         
         eps = 0.001
         
-        index0 = 100
-        prev0 = -1
-        for c0 in range(len(borders)):
-            index1= 100
-            prev1 = -1
-            for c1 in range(len(borders)):
-                index2 = 100
-                for c2 in range(len(borders)):
-                    for c3 in range(len(borders)):
-                        curve0 = borders[c0].curve
-                        curve1 = borders[c1].curve
-                        curve2 = borders[c2].curve
-                        curve3 = borders[c3].curve
-                        
-                        b0 = border.Border.from_curve(curve0, borders[c0].flip)
-                        b1 = border.Border.from_curve(curve1, borders[c1].flip)
-                        b2 = border.Border.from_curve(curve2, borders[c2].flip)
-                        b3 = border.Border.from_curve(curve3, borders[c3].flip)
-                        
-                        if abs(b0.length - b2.length) > eps or abs(b1.length - b3.length) > eps:
-                            continue
+        count = 0
+        min_index = 100
+        stdout_dump = io.StringIO()
+        
+        material_count = len(materials)
+        border_count = len(borders)
+        max_count = material_count * pow(border_count, 4)
+        
+        raw_vertices = 0
+        raw_edges = 0
+        raw_polygons = 0
+        simplified_vertices = 0
+        simplified_edges = 0
+        simplified_polygons = 0
+        
+        scene_name = scene.name
+        
+        for m in range(len(materials)):
+            material = materials[m]
+            if material.material is None:
+                continue
+            
+            material_name = material.export_name if material.export_name else material.material.name
+            settings.top_material = material.material
+            base_path = scene_name + '/' + material_name + '/'
+            
+            index0 = 100
+            prev0 = -1
+            for c0 in range(len(borders)):
+                index1= 100
+                prev1 = -1
+                for c1 in range(len(borders)):
+                    index2 = 100
+                    for c2 in range(len(borders)):
+                        for c3 in range(len(borders)):
+                            current_count = m*pow(border_count,4)+c0*pow(border_count,3)+c1*pow(border_count, 2)+c2*border_count+c3
+                            print('{}/{} ({}%)'.format(current_count, max_count, round(current_count/max_count*100)))
+                            curve0 = borders[c0].curve
+                            curve1 = borders[c1].curve
+                            curve2 = borders[c2].curve
+                            curve3 = borders[c3].curve
+                            
+                            b0 = border.Border.from_curve(curve0, borders[c0].flip)
+                            b1 = border.Border.from_curve(curve1, borders[c1].flip)
+                            b2 = border.Border.from_curve(curve2, borders[c2].flip)
+                            b3 = border.Border.from_curve(curve3, borders[c3].flip)
+                            
+                            if abs(b0.length - b2.length) > eps or abs(b1.length - b3.length) > eps:
+                                continue
 
-                        z1 = 00 + b0.height
-                        z2 = z1 + b1.height
-                        z3 = z2 + b2.height
-                        z0 = z3 + b3.height
-                        if z1 < -eps or z2 < -eps or (z3 <= eps and (z1 > eps or z2 > eps)) or abs(z0) > eps:
-                            continue
-                        
-                        if z2 < eps and z1 + eps > z3:
-                            continue
-                        
-                        if prev0 != c0:
-                            index0 -= 1
-                            index1 = 99
-                            index2 = 99
-                        elif prev1 != c1:
-                            index1 -= 1
-                            index2 = 99
-                        else:
-                            index2 -= 1
-                        prev0 = c0
-                        prev1 = c1
-                        
-                        name = scene.trackmania_multi_surface.base_path + '{}-{}{}/{}-{}{}/{}-{}{}-{}{}'.format(
-                            index0,
-                            curve0.name, 'f' if borders[c0].flip else '',
-                            index1,
-                            curve1.name, 'f' if borders[c1].flip else '',
-                            index2,
-                            curve2.name, 'f' if borders[c2].flip else '',
-                            curve3.name, 'f' if borders[c3].flip else ''
-                        )
-                        scene.name = name
-                        
-                        settings.border_0.curve = curve0
-                        settings.border_0.flip = borders[c0].flip
-                        settings.border_2.curve = curve1
-                        settings.border_2.flip = borders[c1].flip
-                        settings.border_1.curve = curve2
-                        settings.border_1.flip = not borders[c2].flip
-                        settings.border_3.curve = curve3
-                        settings.border_3.flip = not borders[c3].flip
-                        print(name)
-                        bpy.ops.scene.tm_surface_update()
-                        bpy.ops.trackmania.export()
+                            z1 = 00 + b0.height
+                            z2 = z1 + b1.height
+                            z3 = z2 + b2.height
+                            z0 = z3 + b3.height
+                            if z1 < -eps or z2 < -eps or z3 < -eps or (z3 <= eps and (z1 > eps or z2 > eps)) or abs(z0) > eps:
+                                continue
+                            
+                            if z3 < eps and (z1 > eps or z2 > eps):
+                                continue
+                            
+                            if prev0 != c0:
+                                index0 -= 1
+                                index1 = 99
+                                index2 = 99
+                            elif prev1 != c1:
+                                index1 -= 1
+                                index2 = 99
+                            else:
+                                index2 -= 1
+                            prev0 = c0
+                            prev1 = c1
+                            
+                            if index0 < min_index:
+                                min_index = index0
+                            if index1 < min_index:
+                                min_index = index1
+                            if index2 < min_index:
+                                min_index = index2
+                            
+                            name = base_path + '{}-{}{}/{}-{}{}/{}-{}-{}-{}{}-{}{}-{}{}-{}{}'.format(
+                                index0,
+                                curve0.name, 'f' if borders[c0].flip else '',
+                                index1,
+                                curve1.name, 'f' if borders[c1].flip else '',
+                                index2,
+                                scene_name,
+                                material_name,
+                                curve0.name, 'f' if borders[c0].flip else '',
+                                curve1.name, 'f' if borders[c1].flip else '',
+                                curve2.name, 'f' if borders[c2].flip else '',
+                                curve3.name, 'f' if borders[c3].flip else ''
+                            )
+                            scene.trackmania_item.export_path = name
+                            
+                            settings.border_0.curve = curve0
+                            settings.border_0.flip = borders[c0].flip
+                            settings.border_2.curve = curve1
+                            settings.border_2.flip = borders[c1].flip
+                            settings.border_1.curve = curve2
+                            settings.border_1.flip = not borders[c2].flip
+                            settings.border_3.curve = curve3
+                            settings.border_3.flip = not borders[c3].flip
+                            print('Generating and exporting: {}'.format(name))
+                            
+                            with redirect_stdout(stdout_dump):
+                                bpy.ops.scene.tm_surface_update()
+                                
+                                # Simplify mesh
+                                raw_vertices += len(settings.surface.data.vertices)
+                                raw_edges += len(settings.surface.data.edges)
+                                raw_polygons += len(settings.surface.data.polygons)
+                                '''
+                                settings.surface.select_set(True)
+                                context.view_layer.objects.active = settings.surface
+                                bpy.ops.object.mode_set(mode='EDIT')
+                                bpy.ops.mesh.select_mode(type='VERT')
+                                bpy.ops.mesh.select_all(action='SELECT')
+                                bpy.ops.mesh.dissolve_limited(angle_limit=simplify_threshold, use_dissolve_boundaries=True)
+                                bpy.ops.object.mode_set(mode='OBJECT')
+                                '''
+                                simplified_vertices += len(settings.surface.data.vertices)
+                                simplified_edges += len(settings.surface.data.edges)
+                                simplified_polygons += len(settings.surface.data.polygons)
+                                
+                                bpy.ops.trackmania.export()
+                                
+                            count += 1
+
+        print('Generated {} surface items.'.format(count))
+        print('Max node per folder was {}'.format(100 - min_index))
+        print('Generated/Exported vertices: {}/{} (saved {}%)'.format(simplified_vertices, raw_vertices,
+            round((raw_vertices - simplified_vertices) * 100 / raw_vertices)))
+        print('Generated/Exported edges: {}/{} (saved {}%)'.format(simplified_edges, raw_edges,
+            round((raw_edges - simplified_edges) * 100 / raw_edges)))
+        print('Generated/Exported polygons: {}/{} (saved {}%)'.format(simplified_polygons, raw_polygons,
+            round((raw_polygons - simplified_polygons) * 100 / raw_polygons)))
         return {'FINISHED'}
-                        
-    
-    
-'''
-surfaces = []
-for c0 in range(len(curves)):
-    for c1 in range(len(curves)):
-        for c2 in range(len(curves)):
-            for c3 in range(len(curves)):
-                if curves[c0][3] != curves[c2][3] or curves[c1][3] != curves[c3][3]:
-                    continue
-
-                z1 = 00 + curves[c0][2] * (-1 if curves[c0][4] else 1)
-                z2 = z1 + curves[c1][2] * (-1 if curves[c1][4] else 1)
-                z3 = z2 + curves[c2][2] * (-1 if curves[c2][4] else 1)
-                z0 = z3 + curves[c3][2] * (-1 if curves[c3][4] else 1)
-                if z1 < 0 or z2 < 0 or z3 <= 0 or z0 != 0:
-                    continue
-                
-                if z2 == 0 and z1 > z3:
-                    continue
-                
-                print(len(surfaces), c0, c1, c2, c3)
-                surfaces.append((c0, c1, c2, c3))
-'''             
 
 # Panels
 
@@ -690,8 +817,10 @@ class VIEW3D_PT_TM_MultiSurface(Panel):
         scene = context.scene
         settings = scene.trackmania_multi_surface
         
+        # Borders
+        layout.label(text='Borders:')
         row = layout.row()
-        row.template_list('VIEW3D_UL_MultiSurfaceItems', '', settings, 'borders', settings, 'selected_border', rows=4)
+        row.template_list('VIEW3D_UL_MultiSurfaceBorderItems', '', settings, 'borders', settings, 'selected_border', rows=4)
         
         col = row.column(align=True)
         col.operator(VIEW3D_OT_MultiSurfaceBordersEdit.bl_idname, text='+').action = 'ADD'
@@ -700,7 +829,19 @@ class VIEW3D_PT_TM_MultiSurface(Panel):
         col.operator(VIEW3D_OT_MultiSurfaceBordersEdit.bl_idname, icon='TRIA_UP', text='').action = 'UP'
         col.operator(VIEW3D_OT_MultiSurfaceBordersEdit.bl_idname, icon='TRIA_DOWN', text='').action = 'DOWN'
         
-        layout.prop(settings, 'base_path')
+        # Materials
+        layout.label(text='Top Materials:')
+        row = layout.row()
+        row.template_list('VIEW3D_UL_MultiSurfaceMaterialItems', '', settings, 'materials', settings, 'selected_material', rows=4)
+        
+        col = row.column(align=True)
+        col.operator(VIEW3D_OT_MultiSurfaceMaterialsEdit.bl_idname, text='+').action = 'ADD'
+        col.operator(VIEW3D_OT_MultiSurfaceMaterialsEdit.bl_idname, text='-').action = 'REMOVE'
+        col.separator()
+        col.operator(VIEW3D_OT_MultiSurfaceMaterialsEdit.bl_idname, icon='TRIA_UP', text='').action = 'UP'
+        col.operator(VIEW3D_OT_MultiSurfaceMaterialsEdit.bl_idname, icon='TRIA_DOWN', text='').action = 'DOWN'
+        
+        layout.prop(settings, 'simplify_threshold')
         
         layout.operator(VIEW3D_OT_MultiSurfaceGenerate.bl_idname)
 
@@ -781,11 +922,14 @@ class VIEW3D_PT_TM_ActiveSurface(Panel):
 
 classes = (
     SCENE_PG_BorderSettings,
+    SCENE_PG_MultiSurfaceMaterial,
     SCENE_PG_SurfaceSettings,
     SCENE_PG_MultiSurfaceSettings,
     VIEW3D_OT_MultiSurfaceBordersEdit,
+    VIEW3D_OT_MultiSurfaceMaterialsEdit,
     VIEW3D_OT_MultiSurfaceGenerate,
-    VIEW3D_UL_MultiSurfaceItems,
+    VIEW3D_UL_MultiSurfaceBorderItems,
+    VIEW3D_UL_MultiSurfaceMaterialItems,
     VIEW3D_OT_UpdateActiveSurface,
     VIEW3D_PT_TM_Surface,
     VIEW3D_PT_TM_MultiSurface,
