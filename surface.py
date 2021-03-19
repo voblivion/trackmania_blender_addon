@@ -264,7 +264,7 @@ def generate_surface_connector(context):
                     z = settings.height
                 uv_base_material.data[loop_id].uv = (vertex.co[1] / 32, z / 32)
     
-    # Set Lightmap's UV
+    # Set Normals & Lightmap's UV
     uv_lightmap = mesh.uv_layers.new(name='Lightmap')
     mesh.uv_layers.active = uv_lightmap
     margin = settings.lightmap_margin / 100 * 0.25 / 2
@@ -287,12 +287,14 @@ def generate_surface_connector(context):
                 y = 0.5 + margin + (vertex.co[1] / north_border.length) * (0.5 - 2 * margin)
                 uv_lightmap.data[loop_id].uv = (x, y)
         elif (f - (n - 1)) % (2 * (n - 1) + 2) < n - 1: # Top face
+            face.use_smooth = True
             for vertex_id, loop_id in zip(face.vertices, face.loop_indices):
                 vertex = mesh.vertices[vertex_id]
                 x = margin + (vertex.co[0] / east_border.length) * (0.5 - 2 * margin)
                 y = margin + (vertex.co[1] / north_border.length) * (0.5 - 2 * margin)
                 uv_lightmap.data[loop_id].uv = (x, y)
         elif (f - (n - 1)) % (2 * (n - 1) + 2) < 2 * (n - 1): # Bottom face
+            face.use_smooth = True
             for vertex_id, loop_id in zip(face.vertices, face.loop_indices):
                 vertex = mesh.vertices[vertex_id]
                 x = margin + (vertex.co[0] / east_border.length) * (0.5 - 2 * margin)
