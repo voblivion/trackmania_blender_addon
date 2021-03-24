@@ -22,7 +22,7 @@ from bpy.props import (
 )
 from mathutils import Vector
 from random import random
-from math import (radians)
+from math import (radians, floor)
 from contextlib import redirect_stdout
 import io
 
@@ -42,13 +42,23 @@ class SCENE_PG_BorderSettings(PropertyGroup):
     )
     
     def validate_curve(self, curve):
-        return border.is_valid_curve(curve)
+        return curve is not None and border.is_valid_curve(curve)
+    
+    def validate_deformable_curve(self, deformable):
+        return deformable is not None and border.is_valid_curve(deformable) and len(deformable.splines[0].bezier_points) == 2
     
     curve: PointerProperty(
         type=Curve,
         name='Curve',
         description='2D curve defining shape of border.',
         poll=validate_curve
+    )
+    
+    deformable: PointerProperty(
+        type=Curve,
+        name='Deformable',
+        description='2D curve with only 4 control points defining how border should be deformed along other adjacent borders',
+        poll=validate_deformable_curve
     )
 
 
@@ -57,7 +67,9 @@ def draw_border(layout, border, name):
     row = layout.row(align=True)
     row = row.split(factor=0.23, align=True)
     row.label(text=name + ':')
-    row = row.split(factor=0.8, align=True)
+    row = row.split(factor=0.4, align=True)
+    row.prop(border, 'deformable', text='')
+    row = row.split(factor=0.66, align=True)
     row.prop(border, 'curve', text='')
     row.prop(border, 'flip')
 
@@ -73,7 +85,9 @@ def create_pivot(context, name):
     obj.trackmania_pivot.is_pivot = True
     context.scene.collection.objects.link(obj)
     return obj
-    
+
+def ease(x):
+    return 4 * pow(x, 3) if x < 0.5 else 1 - pow(-2 * x + 2, 3) / 2
 
 def generate_surface_connector(context):
     scene = context.scene
@@ -81,43 +95,65 @@ def generate_surface_connector(context):
     object = settings.surface
     
     # East border
-    if settings.border_0.curve is None:
+    if settings.border_0.deformable is None:
         return 'East border is not set'
-    if not border.is_valid_curve(settings.border_0.curve):
+    if not border.is_valid_curve(settings.border_0.deformable):
         return 'East border is invalid'
-    east_border = border.Border.from_curve(settings.border_0.curve, settings.border_0.flip)
+    east_border = border.Border.from_curve(settings.border_0.deformable, settings.border_0.flip)
     
     # West border
-    if settings.border_1.curve is None:
+    if settings.border_1.deformable is None:
         return 'West border is not set'
-    if not border.is_valid_curve(settings.border_1.curve):
+    if not border.is_valid_curve(settings.border_1.deformable):
         return 'West border is invalid'
-    west_border = border.Border.from_curve(settings.border_1.curve, settings.border_1.flip)
+    west_border = border.Border.from_curve(settings.border_1.deformable, settings.border_1.flip)
     
     # East & West points
-    east_west_subdivisions = settings.grid_subdivisions_flat if (east_border.is_flat and west_border.is_flat) else settings.grid_subdivisions_curved
+    north_south_same = (settings.border_2.deformable == settings.border_3.deformable) and (settings.border_2.flip == settings.border_3.flip)
+    east_west_subdivisions = settings.grid_subdivisions_flat if (east_border.is_flat and west_border.is_flat and north_south_same) else settings.grid_subdivisions_semi_flat if east_border.is_flat and west_border.is_flat else settings.grid_subdivisions_curved
     east_points = east_border.sample(east_west_subdivisions, settings.bezier_precision)
     west_points = west_border.sample(east_west_subdivisions, settings.bezier_precision)
+    east_offsets = [Vector((0, 0)) for point in east_points]
+    west_offsets = [Vector((0, 0)) for point in west_points]
+    if settings.border_0.curve is not None:
+        real_east_border = border.Border.from_curve(settings.border_0.curve, settings.border_0.flip)
+        real_east_points = real_east_border.sample(east_west_subdivisions, settings.bezier_precision)
+        east_offsets = [real_east_point - east_point for real_east_point, east_point in zip(real_east_points, east_points)]
+    if settings.border_1.curve is not None:
+        real_west_border = border.Border.from_curve(settings.border_1.curve, settings.border_1.flip)
+        real_west_points = real_west_border.sample(east_west_subdivisions, settings.bezier_precision)
+        west_offsets = [real_west_point - west_point for real_west_point, west_point in zip(real_west_points, west_points)]
     m = len(east_points)
     
     # North border
-    if settings.border_2.curve is None:
+    if settings.border_2.deformable is None:
         return 'North border is not set'
-    if not border.is_valid_curve(settings.border_2.curve):
+    if not border.is_valid_curve(settings.border_2.deformable):
         return 'North border is invalid'
-    north_border = border.Border.from_curve(settings.border_2.curve, settings.border_2.flip)
+    north_border = border.Border.from_curve(settings.border_2.deformable, settings.border_2.flip)
     
     # South border
-    if settings.border_3.curve is None:
+    if settings.border_3.deformable is None:
         return 'South border is not set'
-    if not border.is_valid_curve(settings.border_3.curve):
+    if not border.is_valid_curve(settings.border_3.deformable):
         return 'South border is invalid'
-    south_border = border.Border.from_curve(settings.border_3.curve, settings.border_3.flip)
+    south_border = border.Border.from_curve(settings.border_3.deformable, settings.border_3.flip)
     
     # North & South points
-    north_south_subdivisions = settings.grid_subdivisions_flat if (north_border.is_flat and south_border.is_flat) else settings.grid_subdivisions_curved
+    east_west_same = (settings.border_0.deformable == settings.border_1.deformable) and (settings.border_0.flip == settings.border_1.flip)
+    north_south_subdivisions = settings.grid_subdivisions_flat if (north_border.is_flat and south_border.is_flat and east_west_same) else settings.grid_subdivisions_semi_flat if north_border.is_flat and south_border.is_flat else settings.grid_subdivisions_curved
     north_points = north_border.sample(north_south_subdivisions, settings.bezier_precision)
     south_points = south_border.sample(north_south_subdivisions, settings.bezier_precision)
+    north_offsets = [Vector((0, 0)) for point in north_points]
+    south_offsets = [Vector((0, 0)) for point in south_points]
+    if settings.border_2.curve is not None:
+        real_north_border = border.Border.from_curve(settings.border_2.curve, settings.border_2.flip)
+        real_north_points = real_north_border.sample(north_south_subdivisions, settings.bezier_precision)
+        north_offsets = [real_north_point - north_point for real_north_point, north_point in zip(real_north_points, north_points)]
+    if settings.border_3.curve is not None:
+        real_south_border = border.Border.from_curve(settings.border_3.curve, settings.border_3.flip)
+        real_south_points = real_south_border.sample(north_south_subdivisions, settings.bezier_precision)
+        south_offsets = [real_south_point - south_point for real_south_point, south_point in zip(real_south_points, south_points)]
     n = len(north_points)
 
     
@@ -135,65 +171,158 @@ def generate_surface_connector(context):
     if z_diff > epsilon:
         return 'Borders cannot join in altitude: {}'.format(z_diff)
     
-    # Blend borders
+    # Create Mesh
+    ''' 
+    top face: 0 -> m*n 
+    bottom face: m*n -> 2*m*n
+    east face: 2*m*n -> 2*m*n+2*m
+    west face: 2*m*n+2*m -> 2*m*n+4*m
+    north face: 2*m*n+4*m -> 2*m*n+4*m+2*n
+    north face: 2*m*n+4*m+2*n -> 2*m*n+4*m+4*n
+    '''
+    ## Top / Bottom borders
     vertices = []
+    tmp_vertices = []
     faces = []
+    tmp_faces = []
     for i, east_point in enumerate(east_points):
         west_point = west_points[i]
-        blend_factor = i / (len(east_points) - 1)
+        blend_factor = i / (m - 1)
+        blend_factor = ease(blend_factor)
+        #blend_factor = ease(blend_factor)
         
-        north_border_cpy = north_border.resized(west_point.y + south_border.size.y - east_point.y)
-        south_border_cpy = south_border.resized(west_point.y + south_border.size.y - east_point.y)
-        offset = Vector((0, east_point.y))
+        north_border_cpy = north_border.resized(west_point.y + west_offsets[i].y + south_border.size.y - east_point.y - east_offsets[i].y)
+        south_border_cpy = south_border.resized(west_point.y + west_offsets[i].y + south_border.size.y - east_point.y - east_offsets[i].y)
+        global_offset = Vector((0, east_point.y)) + east_offsets[i]
+        '''
+        cc1 = north_border_cpy.to_curve()
+        oo1 = context.blend_data.objects.new('Curve', cc1)
+        context.scene.collection.objects.link(oo1)
+        oo1.location = Vector((east_point.x,0.0,east_point.y+settings.height))
+        oo1.rotation_euler.z = radians(90)
         
-        north_points_cpy = [point + offset for point in north_border_cpy.sample(north_south_subdivisions, settings.bezier_precision)]
-        south_points_cpy = [point + offset for point in south_border_cpy.sample(north_south_subdivisions, settings.bezier_precision)]
+        cc2 = south_border_cpy.to_curve()
+        oo2 = context.blend_data.objects.new('Curve', cc2)
+        context.scene.collection.objects.link(oo2)
+        oo2.location = Vector((east_point.x,0.0,east_point.y+settings.height))
+        oo2.rotation_euler.z = radians(90)
         '''
-        2---------i+2----------
-        |\          \          \
-        | \          \          \
-        |  1---------i+1---------\
-        5  |\          \          \
-         \ | \          \          \
-          \|  \          \          \
-           4   0----------i----------\
-            \  |          |          |
-             \ |          |          |
-              \|          |          |
-               3---------i+3----------
-        '''
+        north_points_cpy = [point + global_offset + offset for point, offset in zip(north_border_cpy.sample(north_south_subdivisions, settings.bezier_precision), north_offsets)]
+        south_points_cpy = [point + global_offset + offset for point, offset in zip(south_border_cpy.sample(north_south_subdivisions, settings.bezier_precision), south_offsets)]
+        
         vertices.extend([Vector((
             east_point.x,
             blend_factor * north_point.x + (1 - blend_factor) * south_point.x,
             blend_factor * north_point.y + (1 - blend_factor) * south_point.y + settings.height
         )) for north_point, south_point in zip(north_points_cpy, south_points_cpy)])
         
-        vertices.extend([Vector((
+        tmp_vertices.extend([Vector((
             east_point.x,
             blend_factor * north_point.x + (1 - blend_factor) * south_point.x,
             blend_factor * north_point.y + (1 - blend_factor) * south_point.y
         )) for north_point, south_point in zip(north_points_cpy, south_points_cpy)])
         
-        if i == 0:
-            n = len(north_points)
-            faces.extend([(j, j+1, j+n+1, j+n) for j in range(n - 1)])
-        
         if i != 0:
-            n = len(north_points)
-            faces.extend([((i - 1) * (n * 2) + j, i * (n * 2) + j, i * (n * 2) + j + 1, (i - 1) * (n * 2) + j + 1) for j in range(n - 1)])
-            faces.extend([((i - 1) * (n * 2) + j + n, (i - 1) * (n * 2) + j + n + 1, i * (n * 2) + j + n + 1, i * (n * 2) + j + n) for j in range(n - 1)])
-            faces.append(((i-1)*n*2,(i-1)*n*2+n,i*n*2+n,i*n*2))
-            faces.append(((i-1)*n*2+n+n-1,(i-1)*n*2+n-1,i*n*2+n-1,i*n*2+n+n-1))
-        
-        if i == len(east_points) - 1:
-            faces.extend([(i*n*2+j, i*n*2+j+n, i*n*2+j+n+1, i*n*2+j+1) for j in range(n - 1)])
+            faces.extend([((i-1)*n+j,i*n+j,i*n+j+1,(i-1)*n+j+1) for j in range(n-1)])
+            tmp_faces.extend([(m*n+(i-1)*n+j,m*n+(i-1)*n+j+1,m*n+i*n+j+1,m*n+i*n+j) for j in range(n-1)])
     
-    # Offset Z so lowest corner at 0
+    for j, south_point in enumerate(south_points):
+        north_point = north_points[j]
+        blend_factor = ease(j / (n - 1))
+        
+        west_border_cpy = west_border.resized(north_point.y + north_offsets[j].y + east_border.size.y - south_point.y - south_offsets[j].y)
+        east_border_cpy = east_border.resized(north_point.y + north_offsets[j].y + east_border.size.y - south_point.y - south_offsets[j].y)
+        global_offset = Vector((0, south_point.y)) + south_offsets[j]
+        '''
+        cc1 = east_border_cpy.to_curve()
+        oo1 = context.blend_data.objects.new('Curve', cc1)
+        context.scene.collection.objects.link(oo1)
+        oo1.location = Vector((east_point.x,0.0,east_point.y+settings.height))
+        oo1.rotation_euler.z = radians(90)
+        
+        cc2 = west_border_cpy.to_curve()
+        oo2 = context.blend_data.objects.new('Curve', cc2)
+        context.scene.collection.objects.link(oo2)
+        oo2.location = Vector((0.0,south_point.x,south_point.y+settings.height))
+        '''
+        east_points_cpy = [point + global_offset + offset for point, offset in zip(east_border_cpy.sample(east_west_subdivisions, settings.bezier_precision), east_offsets)]
+        west_points_cpy = [point + global_offset + offset for point, offset in zip(west_border_cpy.sample(east_west_subdivisions, settings.bezier_precision), west_offsets)]
+        
+        for i, east_point in enumerate(east_points_cpy):
+            west_point = west_points_cpy[i]
+            vertices[i*n+j] = 0.5 * (vertices[i*n+j] + Vector((
+                blend_factor * west_point.x + (1 - blend_factor) * east_point.x,
+                south_point.x,
+                blend_factor * west_point.y + (1 - blend_factor) * east_point.y + settings.height
+            )))
+            tmp_vertices[i*n+j] = 0.5 * (tmp_vertices[i*n+j] + Vector((
+                blend_factor * west_point.x + (1 - blend_factor) * east_point.x,
+                south_point.x,
+                blend_factor * west_point.y + (1 - blend_factor) * east_point.y
+            )))
+    
+    vertices.extend(tmp_vertices)
+    faces.extend(tmp_faces)
+    v = 2*m*n
+    
+    ## East / West borders
+    vertices.extend([Vector((
+        east_point.x,
+        0.0,
+        east_point.y + settings.height
+    )) for east_point in east_points])
+    vertices.extend([Vector((
+        east_point.x,
+        0.0,
+        east_point.y
+    )) for east_point in east_points])
+    faces.extend([(v+i, v+m+i, v+m+i+1, v+i+1) for i in range(m-1)])
+    v += 2*m
+    vertices.extend([Vector((
+        west_point.x,
+        north_border.length,
+        west_point.y + south_border.height + settings.height
+    )) for west_point in west_points])
+    vertices.extend([Vector((
+        west_point.x,
+        north_border.length,
+        west_point.y + south_border.height
+    )) for west_point in west_points])
+    faces.extend([(v+i, v+i+1, v+m+i+1, v+m+i) for i in range(m-1)])
+    v += 2*m
+    
+    ## South / North borders
+    vertices.extend([Vector((
+        0.0,
+        south_point.x,
+        south_point.y + settings.height
+    )) for south_point in south_points])
+    vertices.extend([Vector((
+        0.0,
+        south_point.x,
+        south_point.y
+    )) for south_point in south_points])
+    faces.extend([(v+j, v+j+1, v+n+j+1, v+n+j) for j in range(n-1)])
+    v += 2*n
+    vertices.extend([Vector((
+        east_border.length,
+        north_point.x,
+        north_point.y + east_border.height + settings.height
+    )) for north_point in north_points])
+    vertices.extend([Vector((
+        east_border.length,
+        north_point.x,
+        north_point.y + east_border.height
+    )) for north_point in north_points])
+    faces.extend([(v+j, v+n+j, v+n+j+1, v+j+1) for j in range(n-1)])
+    v += 2*n
+    
+    ## Offset Z so lowest corner at 0
     z_corners = [0, east_border.size.y, east_border.size.y + north_border.size.y, south_border.size.y]
     offset = Vector((0, 0, -min(z_corners)))
     for vertice in vertices: vertice += offset
     
-    # Replace current surface mesh
+    # Replace current surface mesh, materials, and normals
     mesh = bpy.data.meshes.new('Surface')
     mesh.from_pydata(vertices, [], faces)
     if settings.top_material is None:
@@ -208,113 +337,108 @@ def generate_surface_connector(context):
     old_mesh = object.data
     object.data = mesh
     bpy.data.meshes.remove(old_mesh)
+    for f, face in enumerate(mesh.polygons):
+        face.use_smooth = True
+        if f < (m-1)*(n-1):
+            face.material_index = 0
+        elif f < 2*(m-1)*(n-1):
+            face.material_index = 1
+        else:
+            face.material_index = 2
     
     # Set Pivots
-    if settings.pivot_0 is None:
+    if settings.pivot_0 is None or settings.pivot_0.name not in context.scene.collection.objects:
+        if settings.pivot_0 is not None:
+            context.blend_data.objects.remove(settings.pivot_0)
         settings.pivot_0 = create_pivot(context, 'Pivot_0')
-    settings.pivot_0.location = object.matrix_world @ mesh.vertices[n].co
-    if settings.pivot_1 is None:
+    settings.pivot_0.location = object.matrix_world @ mesh.vertices[m*n].co
+    if settings.pivot_1 is None or settings.pivot_1.name not in context.scene.collection.objects:
+        if settings.pivot_1 is not None:
+            context.blend_data.objects.remove(settings.pivot_1)
         settings.pivot_1 = create_pivot(context, 'Pivot_1')
-    settings.pivot_1.location = object.matrix_world @ mesh.vertices[2*n*(m-1)+n].co
-    if settings.pivot_2 is None:
+    settings.pivot_1.location = object.matrix_world @ mesh.vertices[m*n+n-1].co
+    if settings.pivot_2 is None or settings.pivot_2.name not in context.scene.collection.objects:
+        if settings.pivot_2 is not None:
+            context.blend_data.objects.remove(settings.pivot_2)
         settings.pivot_2 = create_pivot(context, 'Pivot_2')
-    settings.pivot_2.location = object.matrix_world @ mesh.vertices[2*n*(m-1)+2*n-1].co
-    if settings.pivot_3 is None:
+    settings.pivot_2.location = object.matrix_world @ mesh.vertices[m*n+(m-1)*n].co
+    if settings.pivot_3 is None or settings.pivot_3.name not in context.scene.collection.objects:
+        if settings.pivot_3 is not None:
+            context.blend_data.objects.remove(settings.pivot_3)
         settings.pivot_3 = create_pivot(context, 'Pivot_3')
-    settings.pivot_3.location = object.matrix_world @ mesh.vertices[2*n-1].co
+    settings.pivot_3.location = object.matrix_world @ mesh.vertices[m*n+m*n-1].co
     
-    # Set Base Material's UV
+    # Set BaseMaterial's UVs
     uv_base_material = mesh.uv_layers.new(name='BaseMaterial')
     mesh.uv_layers.active = uv_base_material
-    for f in range(len(mesh.polygons)):
-        face = mesh.polygons[f]
-        if (f - (n - 1)) % (2 * (n - 1) + 2) < n - 1:
-            face.material_index = 0
-        else:
-            face.material_index = 1
-        for vertex_id, loop_id in zip(face.vertices, face.loop_indices):
-            vertex = mesh.vertices[vertex_id]
-            uv_base_material.data[loop_id].uv = (vertex.co[0] / 32, vertex.co[1] / 32)
-    for i in range(m-1):
-        fs = [
-            (n - 1) + (2 * (n - 1) + 2) * i + 2 * n - 1,
-            (n - 1) + (2 * (n - 1) + 2) * i + 2 * n - 2
-        ];
-        for f in fs:
-            face = mesh.polygons[f];
-            face.material_index = 2
+    
+    for f, face in enumerate(mesh.polygons):
+        if f < 2*(m-1)*(n-1): # Top or Bottom
             for vertex_id, loop_id in zip(face.vertices, face.loop_indices):
                 vertex = mesh.vertices[vertex_id]
-                p = 0
-                if vertex_id % n != 0:
-                    p = 1
-                z = 0
-                if ((vertex_id + p)/n) % 2 == p:
-                    z = settings.height
+                uv_base_material.data[loop_id].uv = (vertex.co[0] / 32, vertex.co[1] / 32)
+        elif f < 2*(m-1)*(n-1)+(m-1): # East
+            for vertex_id, loop_id in zip(face.vertices, face.loop_indices):
+                vertex = mesh.vertices[vertex_id]
+                z = 0 if vertex_id >= 2*m*n+m else settings.height
                 uv_base_material.data[loop_id].uv = (vertex.co[0] / 32, z / 32)
-    for j in range(n-1):
-        fs = [j, n - 1 + (2 * (n - 1) + 2) * (m - 1) + j]
-        for f in fs:
-            face = mesh.polygons[f]
-            face.material_index = 2
+        elif f < 2*(m-1)*(n-1)+2*(m-1): # West
             for vertex_id, loop_id in zip(face.vertices, face.loop_indices):
                 vertex = mesh.vertices[vertex_id]
-                z = 0
-                if vertex_id % (2 * n * (m - 1)) < n:
-                    z = settings.height
+                z = 0 if vertex_id >= 2*m*n+3*m else settings.height
+                uv_base_material.data[loop_id].uv = (vertex.co[0] / 32, z / 32)
+        elif f < 2*(m-1)*(n-1)+2*(m-1)+(n-1): # South
+            for vertex_id, loop_id in zip(face.vertices, face.loop_indices):
+                vertex = mesh.vertices[vertex_id]
+                z = 0 if vertex_id >= 2*m*n+4*m+n else settings.height
+                uv_base_material.data[loop_id].uv = (vertex.co[1] / 32, z / 32)
+        else: # North
+            for vertex_id, loop_id in zip(face.vertices, face.loop_indices):
+                vertex = mesh.vertices[vertex_id]
+                z = 0 if vertex_id >= 2*m*n+4*m+3*n else settings.height
                 uv_base_material.data[loop_id].uv = (vertex.co[1] / 32, z / 32)
     
     # Set Normals & Lightmap's UV
     uv_lightmap = mesh.uv_layers.new(name='Lightmap')
     mesh.uv_layers.active = uv_lightmap
     margin = settings.lightmap_margin / 100 * 0.25 / 2
-    for f in range(len(mesh.polygons)):
-        face = mesh.polygons[f]
-        if f < n-1: # Front face
-            for vertex_id, loop_id in zip(face.vertices, face.loop_indices):
-                vertex = mesh.vertices[vertex_id]
-                x = 0.5 + margin
-                if vertex_id % (2 * n * (m - 1)) >= n:
-                    x += 0.25 - 2 * margin
-                y = 0.5 + margin + (vertex.co[1] / north_border.length) * (0.5 - 2 * margin)
-                uv_lightmap.data[loop_id].uv = (x, y)
-        elif f >= (n-1) + (2 * (n-1) + 2) * (m-1): # Back face
-            for vertex_id, loop_id in zip(face.vertices, face.loop_indices):
-                vertex = mesh.vertices[vertex_id]
-                x = 0.75 + margin
-                if vertex_id % (2 * n * (m - 1)) >= n:
-                    x += 0.25 - 2 * margin
-                y = 0.5 + margin + (vertex.co[1] / north_border.length) * (0.5 - 2 * margin)
-                uv_lightmap.data[loop_id].uv = (x, y)
-        elif (f - (n - 1)) % (2 * (n - 1) + 2) < n - 1: # Top face
-            face.use_smooth = True
+    
+    for f, face in enumerate(mesh.polygons):
+        if f < (m-1)*(n-1): # Top
             for vertex_id, loop_id in zip(face.vertices, face.loop_indices):
                 vertex = mesh.vertices[vertex_id]
                 x = margin + (vertex.co[0] / east_border.length) * (0.5 - 2 * margin)
                 y = margin + (vertex.co[1] / north_border.length) * (0.5 - 2 * margin)
                 uv_lightmap.data[loop_id].uv = (x, y)
-        elif (f - (n - 1)) % (2 * (n - 1) + 2) < 2 * (n - 1): # Bottom face
-            face.use_smooth = True
+        elif f < 2*(m-1)*(n-1): # Bottom
             for vertex_id, loop_id in zip(face.vertices, face.loop_indices):
                 vertex = mesh.vertices[vertex_id]
                 x = margin + (vertex.co[0] / east_border.length) * (0.5 - 2 * margin)
                 y = 0.5 + margin + (vertex.co[1] / north_border.length) * (0.5 - 2 * margin)
                 uv_lightmap.data[loop_id].uv = (x, y)
-        elif (f - (n - 1)) % (2 * (n - 1) + 2) >= 2 * (n - 1) + 1: # Right face
+        elif f < 2*(m-1)*(n-1)+(m-1): # East
             for vertex_id, loop_id in zip(face.vertices, face.loop_indices):
                 vertex = mesh.vertices[vertex_id]
-                x = 0.5 + margin
-                if ((vertex_id+1) / n) % 2 == 0:
-                    x += 0.25 - 2 * margin
+                x = 0.5 + margin if vertex_id >= 2*m*n+m else 0.75 - margin
                 y = 0.0 + margin + (vertex.co[0] / east_border.length) * (0.5 - 2 * margin)
                 uv_lightmap.data[loop_id].uv = (x, y)
-        else: # Left face
+        elif f < 2*(m-1)*(n-1)+2*(m-1): # West
             for vertex_id, loop_id in zip(face.vertices, face.loop_indices):
                 vertex = mesh.vertices[vertex_id]
-                x = 0.75 + margin
-                if (vertex_id / n) % 2 == 0:
-                    x += 0.25 - 2 * margin
+                x = 0.75 + margin if vertex_id >= 2*m*n+3*m else 1.0 - margin
                 y = 0.0 + margin + (vertex.co[0] / east_border.length) * (0.5 - 2 * margin)
+                uv_lightmap.data[loop_id].uv = (x, y)
+        elif f < 2*(m-1)*(n-1)+2*(m-1)+(n-1): # South
+            for vertex_id, loop_id in zip(face.vertices, face.loop_indices):
+                vertex = mesh.vertices[vertex_id]
+                x = 0.5 + margin if vertex_id >= 2*m*n+4*m+n else 0.75 - margin
+                y = 0.5 + margin + (vertex.co[1] / north_border.length) * (0.5 - 2 * margin)
+                uv_lightmap.data[loop_id].uv = (x, y)
+        else: # North
+            for vertex_id, loop_id in zip(face.vertices, face.loop_indices):
+                vertex = mesh.vertices[vertex_id]
+                x = 0.75 + margin if vertex_id >= 2*m*n+4*m+3*n else 1.0 - margin
+                y = 0.5 + margin + (vertex.co[1] / north_border.length) * (0.5 - 2 * margin)
                 uv_lightmap.data[loop_id].uv = (x, y)
     
     # Set Item settings
@@ -327,7 +451,7 @@ def generate_surface_connector(context):
 def generate_surface(context):
     scene = context.scene
     settings = scene.trackmania_surface_settings
-    if settings.surface is None:
+    if settings.surface is None or scene.collection.objects.get(settings.surface.name) is None:
         mesh = context.blend_data.meshes.new(scene.name)
         object = context.blend_data.objects.new(scene.name, mesh)
         scene.collection.objects.link(object)
@@ -350,7 +474,7 @@ class SCENE_PG_SurfaceSettings(PropertyGroup):
     
     def update(self, context):
         if self.enable_continuous_update:
-            generate_surface(context, self.id_data)
+            generate_surface(context)
        
     enable_continuous_update: BoolProperty(
         name='Enable Continuous Update',
@@ -376,6 +500,15 @@ class SCENE_PG_SurfaceSettings(PropertyGroup):
         description='Number of subdivisions per grid unit when surface is flat (TM vanilla uses 4)',
         min=1,
         soft_max=16,
+        default=4,
+        update=update
+    )
+    
+    grid_subdivisions_semi_flat: IntProperty(
+        name='Semi-flat Subdivisions',
+        description='Number of subdivisions per grid unit when borders along this direction are flat but between differently shaped borders',
+        min=1,
+        soft_max=32,
         default=4,
         update=update
     )
@@ -534,6 +667,7 @@ class VIEW3D_UL_MultiSurfaceBorderItems(UIList):
     
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         row = layout.row()
+        row.prop(item, 'deformable')
         row.prop(item, 'curve')
         row.prop(item, 'flip')
     
@@ -666,16 +800,20 @@ class VIEW3D_OT_MultiSurfaceGenerate(Operator):
             for c0 in range(len(borders)):
                 index1= 100
                 prev1 = -1
+                
+                ## TMP ##
+                base_path = scene_name + '_{}_{}of{}'.format(material_name, floor(c0/2)+1, floor((len(borders)-1)/4+1)) + '/' + material_name + '/'
+                
                 for c1 in range(len(borders)):
                     index2 = 100
                     for c2 in range(len(borders)):
                         for c3 in range(len(borders)):
                             current_count = m*pow(border_count,4)+c0*pow(border_count,3)+c1*pow(border_count, 2)+c2*border_count+c3
                             print('{}/{} ({}%)'.format(current_count, max_count, round(current_count/max_count*100)))
-                            curve0 = borders[c0].curve
-                            curve1 = borders[c1].curve
-                            curve2 = borders[c2].curve
-                            curve3 = borders[c3].curve
+                            curve0 = borders[c0].deformable
+                            curve1 = borders[c1].deformable
+                            curve2 = borders[c2].deformable
+                            curve3 = borders[c3].deformable
                             
                             b0 = border.Border.from_curve(curve0, borders[c0].flip)
                             b1 = border.Border.from_curve(curve1, borders[c1].flip)
@@ -729,12 +867,16 @@ class VIEW3D_OT_MultiSurfaceGenerate(Operator):
                             )
                             scene.trackmania_item.export_path = name
                             
+                            settings.border_0.deformable = borders[c0].deformable
                             settings.border_0.curve = curve0
                             settings.border_0.flip = borders[c0].flip
+                            settings.border_2.deformable = borders[c1].deformable
                             settings.border_2.curve = curve1
                             settings.border_2.flip = borders[c1].flip
+                            settings.border_1.deformable = borders[c2].deformable
                             settings.border_1.curve = curve2
                             settings.border_1.flip = not borders[c2].flip
+                            settings.border_3.deformable = borders[c3].deformable
                             settings.border_3.curve = curve3
                             settings.border_3.flip = not borders[c3].flip
                             print('Generating and exporting: {}'.format(name))
@@ -870,6 +1012,7 @@ class VIEW3D_PT_TM_ActiveSurface(Panel):
         body.prop(settings, 'enable_continuous_update')
         body.prop(settings, 'bezier_precision')
         body.prop(settings, 'grid_subdivisions_flat')
+        body.prop(settings, 'grid_subdivisions_semi_flat')
         body.prop(settings, 'grid_subdivisions_curved')
         body.prop(settings, 'height')
         body.prop(settings, 'lightmap_margin')
