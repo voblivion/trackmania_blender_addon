@@ -7,8 +7,10 @@
 - Ensure blender version is 2.9 or above
 - Ensure Trackmania2020 and NadeoImporter are installed (https://doc.trackmania.com/nadeo-importer/)
 - Download ZIP from repository (github > green "Code" button > Download ZIP)
-- Install into blender: Edit > Preferences > Add-ons > Install > Select downloaded zip file
+- Rename downloaded file "Trackmania.zip"
+- Install into blender: Edit > Preferences > Add-ons > Install > Select "Trackmania.zip"
 - Change Author Name to yours: Edit > Preferences > Add-ons > Trackmania > Author Name
+- Optional: if you want to use material presets/other stuff, you may need to download data.blend manually
 
 Since this addon is still heavily WIP, you can also clone this repository into Blender's addons folders too keep it up-to-date more easily (make sure you then Install it into blender through \_\_init\_\_.py file).
 
