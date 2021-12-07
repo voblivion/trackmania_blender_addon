@@ -65,6 +65,12 @@ class SCENE_PG_TrackmaniaItem(PropertyGroup):
         default=True
     )
     
+    selection_only: BoolProperty(
+        name='Selection Only',
+        description='If set, will only execute selected objects',
+        default=False
+    )
+    
     # Levitation
     ghost_mode: BoolProperty(
         name='Ghost Mode',
@@ -215,6 +221,11 @@ def get_work_dir_path(context):
 
 def get_base_export_path(context):
     return get_work_dir_path(context) / 'Items'
+    
+def get_sub_export_path(context):
+    if not context.scene.trackmania_item.selection_only:
+        return context.scene.trackmania_item.export_path
+    return context.scene.trackmania_item.export_path + '/' + context.view_layer.objects.active.name
 
 class SCENE_OT_TrackmaniaRenderIcon(Operator):
     bl_idname = 'trackmania.render_icon'
@@ -227,7 +238,7 @@ class SCENE_OT_TrackmaniaRenderIcon(Operator):
     @staticmethod
     def get_export_path(context, scene):
         base_path = get_base_export_path(context)
-        sub_path = Path(scene.trackmania_item.export_path + '.tga')
+        sub_path = Path(get_sub_export_path(context) + '.tga')
         return base_path / sub_path.parents[0] / 'Icon' / sub_path.name
     
     scene: StringProperty(
@@ -250,6 +261,8 @@ class SCENE_OT_TrackmaniaRenderIcon(Operator):
     def execute(self, context):
         scene = context.scene if self.scene == '' else context.blend_data.scenes[self.scene]
         item_settings = scene.trackmania_item
+        
+        selection_only = item_settings.selection_only
         
         # Ensure scene render parameters are correct
         scene.render.resolution_x = 64
@@ -286,7 +299,7 @@ class SCENE_OT_TrackmaniaRenderIcon(Operator):
         # Set invisible in render objects that should be
         invisible_objects = []
         for object in scene.objects:
-            if object.type == 'MESH' and not object.data.trackmania_mesh.render_on_icon:
+            if (object.type == 'MESH' and not object.data.trackmania_mesh.render_on_icon) or (selection_only and not object.select_get()):
                 if not object.hide_render:
                     print(object)
                     invisible_objects.append(object)
@@ -346,7 +359,7 @@ class SCENE_OT_TrackmaniaExportMesh(Operator):
     @staticmethod
     def get_export_path(context, scene):
         base_path = get_base_export_path(context)
-        sub_path = Path(scene.trackmania_item.export_path + '.fbx')
+        sub_path = Path(get_sub_export_path(context) + '.fbx')
         return base_path / sub_path.parents[0] / 'Mesh' / sub_path.name
     
     scene: StringProperty(
@@ -355,6 +368,8 @@ class SCENE_OT_TrackmaniaExportMesh(Operator):
     
     def execute(self, context):
         scene = context.scene if self.scene == '' else context.blend_data.scenes[self.scene]
+        
+        selection_only = context.scene.trackmania_item.selection_only
         
         old_object_names = []
         prev_socket_start = context.blend_data.objects.get('_socket_start')
@@ -381,7 +396,7 @@ class SCENE_OT_TrackmaniaExportMesh(Operator):
         active_scene = context.scene
         context.window.scene = scene
         try:
-            bpy.ops.export_scene.fbx(filepath=str(export_path), object_types={'MESH', 'LIGHT'}, axis_up='Y')
+            bpy.ops.export_scene.fbx(filepath=str(export_path), object_types={'MESH', 'LIGHT'}, axis_up='Y', use_selection=selection_only)
             context.window.scene = active_scene
             self.report({'INFO'}, 'Mesh export completed successfully.')
         except Exception as e:
@@ -414,7 +429,7 @@ class SCENE_OT_TrackmaniaExportMeshParams(Operator):
     @staticmethod
     def get_export_path(context, scene):
         base_path = get_base_export_path(context)
-        sub_path = Path(scene.trackmania_item.export_path + '.MeshParams.xml')
+        sub_path = Path(get_sub_export_path(context) + '.MeshParams.xml')
         return base_path / sub_path.parents[0] / 'Mesh' / sub_path.name
     
     scene: StringProperty(
@@ -424,6 +439,8 @@ class SCENE_OT_TrackmaniaExportMeshParams(Operator):
     def execute(self, context):
         scene = context.scene if self.scene == '' else context.blend_data.scenes[self.scene]
         item_settings = scene.trackmania_item
+        
+        selection_only = item_settings.selection_only
         
         export_path = self.get_export_path(context, scene)
         export_path.parents[0].mkdir(parents=True, exist_ok=True)
@@ -438,6 +455,9 @@ class SCENE_OT_TrackmaniaExportMeshParams(Operator):
         xml_materials = et.SubElement(xml_mesh_params, 'Materials')
         materials = {}
         for object in scene.objects:
+            if selection_only and not object.select_get():
+                continue
+            
             for material_slot in object.material_slots:
                 material = material_slot.material
                 if material is not None:
@@ -465,7 +485,7 @@ class SCENE_OT_TrackmaniaExportItem(Operator):
     
     @staticmethod
     def get_export_path(context, scene):
-        return get_base_export_path(context) / (scene.trackmania_item.export_path + '.Item.xml')
+        return get_base_export_path(context) / (get_sub_export_path(context) + '.Item.xml')
     
     scene: StringProperty(
         default=''
@@ -474,6 +494,8 @@ class SCENE_OT_TrackmaniaExportItem(Operator):
     def execute(self, context):
         scene = context.scene if self.scene == '' else context.blend_data.scenes[self.scene]
         item_settings = scene.trackmania_item
+        
+        selection_only = item_settings.selection_only
         
         export_path = self.get_export_path(context, scene)
         export_path.parents[0].mkdir(parents=True, exist_ok=True)
@@ -497,6 +519,9 @@ class SCENE_OT_TrackmaniaExportItem(Operator):
         # Pivots
         xml_pivots = et.SubElement(xml_item, 'Pivots')
         for object in scene.objects:
+            if selection_only and not object.select_get():
+                continue
+            
             if object.type == 'EMPTY':
                 if object.trackmania_pivot.is_pivot:
                     xml_pivot = et.SubElement(xml_pivots, 'Pivot')
@@ -531,7 +556,10 @@ class SCENE_OT_TrackmaniaExportItem(Operator):
         # Lights
         xml_lights = et.SubElement(xml_item, 'Lights')
         for object in scene.objects:
-            if object.type == 'LIGHT' and object.data.type in ['POINT', 'SPOT'] and object.date.trackmania_light.export:
+            if selection_only and not object.select_get():
+                continue
+            
+            if object.type == 'LIGHT' and object.data.type in ['POINT', 'SPOT'] and object.data.trackmania_light.export:
                 light = object.data
                 xml_light = et.SubElement(xml_lights, 'Light')
                 color = [int(channel * 255) for channel in light.color]
@@ -726,6 +754,7 @@ class VIEW3D_PT_TrackmaniaItemExport(Panel):
         row.prop(item_settings, 'export_item')
         row = layout.row()
         row.prop(item_settings, 'export_nadeo')
+        row.prop(item_settings, 'selection_only')
         
         row = layout.row()
         row.operator(SCENE_OT_TrackmaniaExport.bl_idname, text='Export Current Item')
