@@ -1,0 +1,19 @@
+# Basics
+[X] Add Items
+[X] Add Mesh
+[X] Add Trigger
+[X] Add Start
+[X] Add Pivot
+[X] Add Light
+[X] Material from data
+
+# Error handling
+[X] Popen return value / synchronous
+[X] Show NadeoImport errors
+
+# Surfaces
+[ ] Screw surface
+[X] Connector surface
+[X] Export all Items
+[ ] Multi-material export ?
+[ ] Surface - generate pivots
