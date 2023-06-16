@@ -27,13 +27,13 @@ By default, collections are used to organize folders/sub-folders in which items 
 
 In below example, collection "Beautiful" will NOT be exported into a "Beautiful" item (Export Type: None) but any Separate/Unique object or sub-collection inside it will be placed into folder "Rocks/Beautiful".
 
-![alt text](https://github.com/voblivion/trackmania_blender_addon/blob/main/doc/collection_export.png?raw=true)
+![collection export settings](https://github.com/voblivion/trackmania_blender_addon/blob/main/doc/collection_export.png?raw=true)
 
 Each collection also stores item export settings for itself and for its unique/separate (see below) objects.
 
 In below example, collection "Beautiful" stores export settings for both the "Rocks/Beautiful/Flat" and "Rocks/Beautiful/Slope" items.
 
-![alt text](https://github.com/voblivion/trackmania_blender_addon/blob/main/doc/collection_item.png?raw=true)
+![item settings](https://github.com/voblivion/trackmania_blender_addon/blob/main/doc/collection_item.png?raw=true)
 
 ## Objects
 
@@ -44,7 +44,7 @@ Objects (meshes, lights, pivots, etc.) by default are not exported into their ow
 
 In below example both "Slope" and "Flat" objects are set to "Separate" export type while each "Pivot" object is set to "Collection". During export, this will lead both "Flat" and "Slope" objects to be exported with into their own "Rocks/Beautiful/Flat" and "Rocks/Beautiful/Slope" items with all 4 pivots. If "Flat" export type was set to "Unique" instead, it would be exported with none of the pivots.
 
-![alt text](https://github.com/voblivion/trackmania_blender_addon/blob/main/doc/object_export.png?raw=true)
+![object export settings](https://github.com/voblivion/trackmania_blender_addon/blob/main/doc/object_export.png?raw=true)
 
 ## Meshes
 
@@ -52,7 +52,7 @@ Mesh-specific settings can allow hidding collider meshes or disabling physics of
 
 Make sure a mesh is selected and active to see the following:
 
-![alt text](https://github.com/voblivion/trackmania_blender_addon/blob/main/doc/mesh.png?raw=true)
+![mesh settings](https://github.com/voblivion/trackmania_blender_addon/blob/main/doc/mesh.png?raw=true)
 
 ## Lights
 
@@ -60,7 +60,7 @@ Light-specific settings can allow modifying key parameters exported with the ite
 
 Make sure a light is selected and active to see the following:
 
-![alt text](https://github.com/voblivion/trackmania_blender_addon/blob/main/doc/light.png?raw=true)
+![light settings](https://github.com/voblivion/trackmania_blender_addon/blob/main/doc/light.png?raw=true)
 
 ## Materials
 
@@ -68,7 +68,7 @@ Material-specific settings can allow modifying visuals, physics, and gameplay pr
 
 Note that gameplay and color properties will only be editable when they would have an effect; else they will not be shown. Play with "Material" type to see which materias can accept a custom color or gameplay property.
 
-![alt text](https://github.com/voblivion/trackmania_blender_addon/blob/main/doc/material.png?raw=true)
+![material settings](https://github.com/voblivion/trackmania_blender_addon/blob/main/doc/material.png?raw=true)
 
 ## Export
 
@@ -78,4 +78,12 @@ A good way to setup your workspace is to setup your entire scene's collections/o
 
 In below example, objects "Slope" and "Mesh" are selected. The first one will create item "Rocks/Beautiful/Slope" which will contain 4 pivots. The second will create item "Rocks/MyLight" which will contain a mesh and a point light.
 
-![alt text](https://github.com/voblivion/trackmania_blender_addon/blob/main/doc/export.png?raw=true)
+![export](https://github.com/voblivion/trackmania_blender_addon/blob/main/doc/export.png?raw=true)
+
+## Copy settings
+
+To copy export/item settings between collections/objects, select elements to paste settings to (hold `Ctrl`) and finish by selecting element to copy settings from (keep holding `Ctrl`), then click the appropriate copy button. Collection's selection is done by selecting any object within the collection.
+
+In below example, item settings from "MyLight" collection will be copied into "Beautiful" and "MyCheckpoint" collection.
+
+![copy settings](https://github.com/voblivion/trackmania_blender_addon/blob/main/doc/copy.png?raw=true)
