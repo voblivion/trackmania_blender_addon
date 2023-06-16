@@ -1,8 +1,8 @@
 bl_info = {
-    'name': 'Trackmania',
+    'name': 'Trackmania 2020 Exporter',
     'author': 'voblivion',
-    'version': (1, 0),
-    'blender': (2, 80, 0),
+    'version': (2, 0),
+    'blender': (3, 5, 0),
     'location': 'View3D > Sidebar > Trackmania',
     'description': 'Tools to generate blocs b',
     'warning': 'WIP',
@@ -10,25 +10,16 @@ bl_info = {
     'category': 'Game'
 }
 
-from . import (
-    preferences,
-    part,
-    material,
-    item,
-    menu,
-    surface
-)
+from . import (preferences, properties, panels, operators)
 
 # HACK reload
 import importlib
 preferences = importlib.reload(preferences)
-part = importlib.reload(part)
-item = importlib.reload(item)
-material = importlib.reload(material)
-menu = importlib.reload(menu)
-surface = importlib.reload(surface)
+properties = importlib.reload(properties)
+panels = importlib.reload(panels)
+operators = importlib.reload(operators)
 
-modules = [preferences, part, material, item, menu, surface]
+modules = [preferences, properties, panels, operators]
 
 def register():
     for module in modules:
@@ -40,7 +31,3 @@ def unregister():
 
 if __name__ == '__main__':
     register()
-
-
-
-
