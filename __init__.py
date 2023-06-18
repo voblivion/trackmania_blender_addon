@@ -1,6 +1,6 @@
 import bpy
 bl_info = {
-    'name': 'Trackmania 2020',
+    'name': 'Trackmania 2020 Blender Toolbox',
     'author': 'voblivion',
     'version': (2, 0, 1),
     'blender': (3, 5, 0),
