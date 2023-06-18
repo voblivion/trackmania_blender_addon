@@ -54,7 +54,7 @@ Controlling item pivots is done by adding empty objects. When collection's expor
 
 Material export settings can be changed in the material properties under the `Trackmania` section.
 
-![collection](https://github.com/voblivion/trackmania_blender_addon/blob/main/doc/pivot.png?raw=true)
+![collection](https://github.com/voblivion/trackmania_blender_addon/blob/main/doc/material.png?raw=true)
 
 Note that some settings (Gameplay and Color) may appear/disappear as you update the material identifier. This is because trackmania doesn't support overriding gameplay and color properties for every material.
 
