@@ -142,12 +142,12 @@ class SCENE_OT_TrackmaniaRemoveExtraUVLayers(Operator):
                 needs_lightmap_uv = needs_lightmap_uv or material.trackmania_material.needs_lightmap_uv
             
             if not needs_base_material_uv and 'BaseMaterial' in mesh.uv_layers:
-                mesh.uv_layers.new(name='BaseMaterial')
+                mesh.uv_layers.remove(mesh.uv_layers['BaseMaterial'])
                 self.report({'INFO'}, 'UV layer \'BaseMaterial\' was removed from mesh {}.'.format(object.name))
                 removed_uv_layer_count = removed_uv_layer_count + 1
             
             if not needs_lightmap_uv and 'Lightmap' in mesh.uv_layers:
-                mesh.uv_layers.new(name='Lightmap')
+                mesh.uv_layers.remove(mesh.uv_layers['Lightmap'])
                 removed_uv_layer_count = removed_uv_layer_count + 1
             
             for uv_layer in mesh.uv_layers:

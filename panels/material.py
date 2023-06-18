@@ -16,11 +16,18 @@ class MATERIAL_PT_TrackmaniaMaterial(Panel):
     
     def draw(self, context):
         layout = self.layout
-        trackmania_settings = context.material.trackmania_material
+        material_settings = context.material.trackmania_material
         
-        layout.prop(trackmania_settings, 'identifier')
-        layout.prop(trackmania_settings, 'physics')
-        if trackmania_settings.can_customize_gameplay:
-            layout.prop(trackmania_settings, 'gameplay')
-        if trackmania_settings.can_customize_color:
-            layout.prop(trackmania_settings, 'color')
+        layout.prop(material_settings, 'identifier')
+        required_uv_layers = []
+        if material_settings.needs_base_material_uv:
+            required_uv_layers.append('BaseMaterial')
+        if material_settings.needs_lightmap_uv:
+            required_uv_layers.append('Liehgtmap')
+        
+        layout.label(text='Required UV layers: ' + ('None' if not required_uv_layers else ', '.join(required_uv_layers)))
+        layout.prop(material_settings, 'physics')
+        if material_settings.can_customize_gameplay:
+            layout.prop(material_settings, 'gameplay')
+        if material_settings.can_customize_color:
+            layout.prop(material_settings, 'color')
