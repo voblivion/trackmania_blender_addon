@@ -2,7 +2,7 @@ import bpy
 bl_info = {
     'name': 'Trackmania 2020',
     'author': 'voblivion',
-    'version': (2, 1),
+    'version': (2, 0, 1),
     'blender': (3, 5, 0),
     'location': 'View3D > Sidebar > Trackmania ; Material > Trackmania ; ...',
     'description': 'Export items to Trackmania 2020',
