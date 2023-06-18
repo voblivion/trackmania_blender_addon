@@ -6,8 +6,8 @@
 
 - Ensure blender version is 3.5 or above
 - Ensure Trackmania2020 and NadeoImporter are installed (https://doc.trackmania.com/nadeo-importer/)
-- Download ZIP from repository (github > green "Code" button > Download ZIP)
-- Install into blender: Edit > Preferences > Add-ons > Install > Select downloaded archive
+- Download latest release (see "Releases" section on the right)
+- Install into blender: `Edit > Preferences > Add-ons > Install > Select downloaded release archive`
 - Change Author Name to yours: Edit > Preferences > Add-ons > Trackmania > Author Name
 
 ![collection](https://github.com/voblivion/trackmania_blender_addon/blob/main/doc/preferences.png?raw=true)
