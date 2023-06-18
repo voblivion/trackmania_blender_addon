@@ -11,7 +11,7 @@ from bpy.props import (
 )
 
 class TrackmaniaAddonPreferences(AddonPreferences):
-    bl_idname = 'Trackmania'
+    bl_idname = __name__.split('.')[0]
     
     install_dir: StringProperty(
         name='Trackmania Install Directory',
@@ -38,19 +38,12 @@ class TrackmaniaAddonPreferences(AddonPreferences):
         layout.prop(self, 'install_dir')
         layout.prop(self, 'user_dir')
         layout.prop(self, 'author_name')
-        
-
-classes = (
-    TrackmaniaAddonPreferences,
-)
 
 def register():
-    for cls in classes:
-        bpy.utils.register_class(cls)
+    bpy.utils.register_class(TrackmaniaAddonPreferences)
     
 
 def unregister():
-    for cls in classes:
-        bpy.utils.unregister_class(cls)
+    bpy.utils.unregister_class(TrackmaniaAddonPreferences)
 
     

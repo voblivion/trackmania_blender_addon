@@ -1,11 +1,10 @@
 import bpy
 from bpy.types import Panel
-from ..utils import tm
 
 
 class MATERIAL_PT_TrackmaniaMaterial(Panel):
     bl_idname = 'MATERIAL_PT_TrackmaniaMaterial'
-    bl_label = 'Trackmania Material'
+    bl_label = 'Trackmania'
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_category = 'Trackmania'
@@ -19,16 +18,9 @@ class MATERIAL_PT_TrackmaniaMaterial(Panel):
         layout = self.layout
         trackmania_settings = context.material.trackmania_material
         
-        layout.prop(trackmania_settings, 'material')
+        layout.prop(trackmania_settings, 'identifier')
         layout.prop(trackmania_settings, 'physics')
-        if trackmania_settings.material in tm.gameplay_override_compatible_materials:
+        if trackmania_settings.can_customize_gameplay:
             layout.prop(trackmania_settings, 'gameplay')
-        if tm.get_tm_materials(context)[trackmania_settings.material].allows_color:
+        if trackmania_settings.can_customize_color:
             layout.prop(trackmania_settings, 'color')
-
-def register():
-    bpy.utils.register_class(MATERIAL_PT_TrackmaniaMaterial)
-
-def unregister():
-    bpy.utils.unregister_class(MATERIAL_PT_TrackmaniaMaterial)
-

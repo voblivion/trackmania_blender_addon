@@ -1,16 +1,12 @@
-import bpy
-from . import export_operator_base
-from ..utils import export
-from ..utils import tm
 import os
 import math
 from xml.etree import ElementTree as xml
 from xml.dom import minidom
+from . import base
 
 # HACK reload
 import importlib
-export = importlib.reload(export)
-export_operator_base = importlib.reload(export_operator_base)
+base = importlib.reload(base)
 
 
 def _gamma_correct(channel):
@@ -23,31 +19,25 @@ def _color_to_hex(color):
     return '{:02X}{:02X}{:02X}'.format(_gamma_correct(color.r), _gamma_correct(color.g), _gamma_correct(color.b))
 
 
-class SCENE_OT_TrackmaniaExportMeshParams(export_operator_base._SCENE_OT_TrackmaniaExportBase):
+class SCENE_OT_TrackmaniaExportMeshParams(base.SCENE_OT_TrackmaniaExportBase):
     bl_idname = 'trackmania.export_mesh_params'
-    bl_label = 'Export Mesh Params'
-    bl_options = {'REGISTER'}
+    bl_label = 'Trackmania Export Mesh Params'
+    bl_description = 'Exports .MeshParams.xml of selected items.'
     
-    def execute(self, context):
-        objects = context.view_layer.objects.selected
-        collection = context.collection
-        item_settings = collection.trackmania_item
-        
-        # Generate Path
-        base_path = export.get_base_export_path(context)
-        sub_path = self.get_sub_path(context)
-        if sub_path is None:
-            return {'CANCELLED'}
-        path = base_path / sub_path.parents[0] / 'Mesh' / sub_path.name
-        
-        mesh_path_name = str(base_path / sub_path.parents[0] / 'Mesh' / sub_path.name) + '.fbx'
+    def export(self, context):
+        objects = context.selected_objects
+        item_settings = context.collection.trackmania_item
+        item_path = base.SCENE_OT_TrackmaniaExportBase.get_item_path(context)
+        base_path = item_path.parents[0] / 'Mesh' / item_path.name
+        mesh_path = base_path.with_suffix('.fbx')
+        path = base_path.with_suffix('.MeshParams.xml')
         
         # Generate XML
         xml_mesh_params = xml.Element('MeshParams')
         xml_mesh_params.set('MeshType', 'Static')
         xml_mesh_params.set('Collection', 'Stadium')
         xml_mesh_params.set('Scale', str(item_settings.scale))
-        xml_mesh_params.set('FbxFile', os.path.relpath(mesh_path_name, path.parents[0]))
+        xml_mesh_params.set('FbxFile', os.path.relpath(str(mesh_path), path.parents[0]))
         
         # .1 Generate Materials section
         xml_materials = xml.SubElement(xml_mesh_params, 'Materials')
@@ -61,7 +51,7 @@ class SCENE_OT_TrackmaniaExportMeshParams(export_operator_base._SCENE_OT_Trackma
         for material in materials:
             xml_material = xml.SubElement(xml_materials, 'Material')
             xml_material.set('Name', material.name)
-            xml_material.set('Link', material.trackmania_material.material)
+            xml_material.set('Link', material.trackmania_material.identifier)
             xml_material.set('Color', _color_to_hex(material.trackmania_material.color))
             if material.trackmania_material.gameplay != 'None':
                 xml_material.set('GameplayId', str(material.trackmania_material.gameplay))
@@ -89,18 +79,14 @@ class SCENE_OT_TrackmaniaExportMeshParams(export_operator_base._SCENE_OT_Trackma
                 xml_light.set('SpotInnerAngle', str(sqrt(1-light.spot_blend) * math.degrees(light.spot_size)))
         
         # Export
+        success = False
         try:
             path.parents[0].mkdir(parents=True, exist_ok=True)
-            file = open(str(path) + '.MeshParams.xml', 'w')
+            file = open(str(path), 'w')
             file.write(minidom.parseString(xml.tostring(xml_mesh_params)).toprettyxml())
-            self.report({'INFO'}, 'Mesh params exported successfully: ' + str(path) + '.MeshParams.xml.')
+            self.report({'INFO'}, 'Mesh params {} exported to {}.'.format(path.name, path.parents[0]))
+            success = True
         except Exception as e:
-            self.report({'ERROR'}, 'Error occured while exporting mesh params: ' + str(e))
+            self.report({'ERROR'}, 'Failed to export mesh params {} to {}: {}'.format(path.name, path.parents[0], e))
         
-        return {'FINISHED'}
-
-def register():
-    bpy.utils.register_class(SCENE_OT_TrackmaniaExportMeshParams)
-
-def unregister():
-    bpy.utils.unregister_class(SCENE_OT_TrackmaniaExportMeshParams)
+        return success

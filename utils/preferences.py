@@ -1,3 +1,4 @@
 
 def get(context):
-    return context.preferences.addons['Trackmania'].preferences
+    print(__name__.split('.')[0])
+    return context.preferences.addons[__name__.split('.')[0]].preferences

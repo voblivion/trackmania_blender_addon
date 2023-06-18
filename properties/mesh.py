@@ -1,12 +1,5 @@
-import bpy
 from bpy.types import PropertyGroup
 from bpy.props import (BoolProperty, EnumProperty, PointerProperty, StringProperty)
-import pathlib
-from ..utils import export
-
-# HACK reload
-import importlib
-export = importlib.reload(export)
 
 
 class MESH_PG_TrackmaniaMesh(PropertyGroup):
@@ -15,9 +8,9 @@ class MESH_PG_TrackmaniaMesh(PropertyGroup):
     mesh_type: EnumProperty(
         name='Mesh Type',
         items=(
-            ('MESH', 'Mesh', 'A mesh be collidable and/or visible to player'),
-            ('TRIGGER', 'Trigger', 'A trigger to be used by waypoint item'),
-            ('SPAWN', 'Spawn', 'Waypoint spawn point'),
+            ('MESH', 'Mesh', 'A mesh be collidable and/or visible to player', 'MESH_CUBE', 0),
+            ('TRIGGER', 'Trigger', 'A trigger to be used by waypoint item', 'SELECT_SET', 1),
+            ('SPAWN', 'Spawn', 'Waypoint spawn point', 'PIVOT_CURSOR', 2),
         )
     )
     
@@ -48,11 +41,3 @@ class MESH_PG_TrackmaniaMesh(PropertyGroup):
             return '_notcollidable_' + base_name
         else:
             return base_name
-
-def register():
-    bpy.utils.register_class(MESH_PG_TrackmaniaMesh)
-    bpy.types.Mesh.trackmania_mesh = PointerProperty(type=MESH_PG_TrackmaniaMesh)
-
-def unregister():
-    bpy.utils.unregister_class(MESH_PG_TrackmaniaMesh)
-    del bpy.types.Mesh.trackmania_mesh

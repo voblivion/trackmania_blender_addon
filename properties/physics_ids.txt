@@ -1,0 +1,23 @@
+Default: no override
+Asphalt: the actual base material of TrackMania, used on every normal road and platforms
+Concrete: "base" material, but not used for base roads in TM !
+Dirt: used in dirt blocks
+Grass: used in the default grass of the stadium (not to be mistaken with Green surfaces) and as a speed penalty surface
+Green: used in synthetic grass platforms (not to be mistaken with Grass surfaces)
+Ice: used in the colorable CustomIce material
+Metal: used in black platform blocks
+MetalTrans: mostly used on screens
+NotCollidable: used for decals, to... not be collidable. But instead of using this PhysicsId, you should rather use the _notcollidable_ prefix in your fbx objects, as described in section How to create the fbx file.
+Pavement: used in the colorable CustomBricks material
+Plastic: used in inflatable items introduced in June 2021 update
+ResonantMetal: also used in black platform blocks, usually makes a noise on collision
+RoadIce: used in "bobsleigh" ice blocks
+RoadSynthetic: used in bump roads
+Rock: used in colorable CustomRock material
+Rubber: used on the sides of the roads, gives speed penalty when hit
+Sand: used as a speed penalty surface in dirt platform blocks
+Snow: used in colorable CustomSnow material and as a speed penalty surface
+TechMagnetic: not used in any game material, makes the car attracted to that surface
+TechMagneticAccel: not used in any game material, makes the car attracted to that surface and gives it a better acceleration while on it
+TechSuperMagnetic: not used in any game material, makes the car attracted strongly to that surface
+Wood: used in colorable CustomRoughWood material

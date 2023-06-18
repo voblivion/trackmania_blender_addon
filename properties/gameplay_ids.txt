@@ -1,0 +1,16 @@
+Bumper: makes the car bump a bit
+Bumper2: makes the car bump a lot
+Cruise: makes the car maintain its speed
+ForceAcceleration: disables breaking until next Reset block or next checkpoint
+Fragile: makes the car sensitive to hard bumps and crashes, making it harder to handle and accelerate the more damages it takes. Only gets back to normal with a Reset Block
+FreeWheeling: entirely stops the engine until next Reset block or next checkpoint
+NoBrakes: disables the car brakes
+NoGrip: comparable to ice, but way less handling and no drift mechanic until next Reset block or next checkpoint
+None: no gameplay effect (this is the default value for all game materials)
+NoSteering: disables steering until next Reset block or next checkpoint
+ReactorBoost: activates flames at the sides of the wheels that push the car upwards or downwards for some time or until next Reset block (direction of ReactorBoost is along Z-axis: towards positive Z is ReactorBoost Up and towards negative is ReactorBoost Down)
+ReactorBoost2: same effect as ReactorBoost, but stronger
+Reset: disables any ongoing gameplay effects
+SlowMotion: slows down the behaviour of the car (but not the timer) for some time or until next Reset block
+Turbo: "yellow turbo" blocks, sudden burst of acceleration (direction of Turbo is North / along Z-axis)
+Turbo2: "red turbo" blocks, stronger burst of acceleration (direction of Turbo2 is North / along the Z-axis)

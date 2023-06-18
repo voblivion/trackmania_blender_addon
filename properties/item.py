@@ -1,24 +1,31 @@
-import bpy
 from bpy.types import PropertyGroup
 from bpy.props import (
     BoolProperty,
     EnumProperty,
     FloatProperty,
     FloatVectorProperty,
-    StringProperty,
-    PointerProperty,
 )
-import pathlib
-from ..utils import export
-
-# HACK reload
-import importlib
-export = importlib.reload(export)
 
 
-class OBJECT_PG_TrackmaniaItem(PropertyGroup):
-    bl_idname = 'OBJECT_PG_TrackmaniaItem'
-
+class COLLECTION_PG_TrackmaniaItem(PropertyGroup):
+    bl_idname = 'COLLECTION_PG_TrackmaniaItem'
+    
+    export_type: EnumProperty(
+        name='Export Type',
+        items=(
+            ('NONE', 'None', 'Collection doesn\'t exported into any item and its direct child objects are not exported into any item.'),
+            ('SINGLE', 'Single', 'Collection is exported into an unique item named after the collection and with all objects it contains.'),
+            ('MULTIPLE', 'Multiple', 'Each mesh / light in the collection is exported into its own item. Pivots (empty objects) are shared.')
+        ),
+        default='NONE'
+    )
+    
+    creates_folder: BoolProperty(
+        name='Creates Folder',
+        description='Whether or not this collection will participate in the folder hiearchy of exported items. When set, a folder named after the collection will be created inside parent collection\'s folder.',
+        default=True
+    )
+    
     # Levitation
     ghost_mode: BoolProperty(
         name='Ghost Mode',
@@ -80,7 +87,7 @@ class OBJECT_PG_TrackmaniaItem(PropertyGroup):
             return -1
         return self.pivot_snap_distance
     
-    # Other
+    # Miscellaneous
     waypoint_type: EnumProperty(
         name='Waypoint Type',
         description='Type of waypoint, None if not a waypoint',
@@ -117,15 +124,8 @@ class OBJECT_PG_TrackmaniaItem(PropertyGroup):
     def update_icon_settings(self, context):
         pass #TODO: bpy.ops.trackmania.render_icon(force_default_camera=True, save=False)
     
-    icon_generate: BoolProperty(
-        name='Generate',
-        description='Whether or not icon should be generated during export, else icon must be already in appropriate folder.',
-        default=True,
-        update=update_icon_settings
-    )
-    
-    icon_enable_camera: BoolProperty(
-        name='Enable Camera',
+    icon_generate_camera: BoolProperty(
+        name='Generate Camera',
         description='If set, will add a camera to the scene before generating Item\'s Icon.',
         default=True,
         update=update_icon_settings
@@ -142,8 +142,8 @@ class OBJECT_PG_TrackmaniaItem(PropertyGroup):
         default=45,
         update=update_icon_settings
     )
-    icon_enable_sun: BoolProperty(
-        name='Enable Sun',
+    icon_generate_sun: BoolProperty(
+        name='Generate Sun',
         description='If set, will add a sun to the scene before generating Item\'s Icon.',
         default=True,
         update=update_icon_settings
@@ -170,11 +170,3 @@ class OBJECT_PG_TrackmaniaItem(PropertyGroup):
         default=15,
         update=update_icon_settings
     )
-
-def register():
-    bpy.utils.register_class(OBJECT_PG_TrackmaniaItem)
-    bpy.types.Collection.trackmania_item = PointerProperty(type=OBJECT_PG_TrackmaniaItem)
-
-def unregister():
-    bpy.utils.unregister_class(OBJECT_PG_TrackmaniaItem)
-    del bpy.types.Collection.trackmania_item

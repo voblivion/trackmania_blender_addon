@@ -1,25 +1,25 @@
+import bpy
 bl_info = {
-    'name': 'Trackmania 2020 Exporter',
+    'name': 'Trackmania 2020',
     'author': 'voblivion',
     'version': (2, 0),
     'blender': (3, 5, 0),
-    'location': 'View3D > Sidebar > Trackmania',
-    'description': 'Tools to generate blocs b',
-    'warning': 'WIP',
+    'location': 'View3D > Sidebar > Trackmania ; Material > Trackmania ; ...',
+    'description': 'Export items to Trackmania 2020',
     'doc_url': '',
-    'category': 'Game'
+    'category': 'Import-Export'
 }
 
-from . import (preferences, properties, panels, operators)
+from . import (operators, preferences, properties, panels)
 
 # HACK reload
 import importlib
+operators = importlib.reload(operators)
 preferences = importlib.reload(preferences)
 properties = importlib.reload(properties)
 panels = importlib.reload(panels)
-operators = importlib.reload(operators)
 
-modules = [preferences, properties, panels, operators]
+modules = [operators, preferences, properties, panels]
 
 def register():
     for module in modules:

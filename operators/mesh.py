@@ -1,29 +1,48 @@
 import bpy
-from . import export_operator_base
-from ..utils import export
+from . import base
 
 # HACK reload
 import importlib
-export = importlib.reload(export)
-export_operator_base = importlib.reload(export_operator_base)
+base = importlib.reload(base)
 
 
-class SCENE_OT_TrackmaniaExportMesh(export_operator_base._SCENE_OT_TrackmaniaExportBase):
+class SCENE_OT_TrackmaniaExportMesh(base.SCENE_OT_TrackmaniaExportBase):
     bl_idname = 'trackmania.export_mesh'
-    bl_label = 'Export Mesh'
-    bl_options = {'REGISTER'}
+    bl_label = 'Trackmania Export Mesh'
+    bl_description = 'Exports .fbx mesh of selected items.'
     
-    def execute(self, context):
-        objects = context.view_layer.objects.selected
-        collection = context.collection
-        item_settings = collection.trackmania_item
+    def export(self, context):
+        objects = context.selected_objects
+        item_settings = context.collection.trackmania_item
+        item_path = base.SCENE_OT_TrackmaniaExportBase.get_item_path(context)
+        path = (item_path.parents[0] / 'Mesh' / item_path.name).with_suffix('.fbx')
         
-        # Generate Path
-        base_path = export.get_base_export_path(context)
-        sub_path = self.get_sub_path(context)
-        if sub_path is None:
-            return {'CANCELLED'}
-        path = base_path / sub_path.parents[0] / 'Mesh' / sub_path.name
+        # Ensure objects have enough UV layers
+        has_material_errors = False
+        for object in objects:
+            if object.type != 'MESH' or not object.data.trackmania_mesh.is_visible:
+                continue
+            
+            materials = [material for material in object.data.materials if material is not None]
+            if not materials:
+                self.report({'ERROR'}, 'Mesh {} is visible but has no materials.'.format(object.name))
+                has_material_errors = True
+                continue
+            
+            needs_base_material_uv = False
+            needs_lightmap_uv = False
+            for material in materials:
+                needs_base_material_uv = needs_base_material_uv or material.trackmania_material.needs_base_material_uv
+                needs_lightmap_uv = needs_lightmap_uv or material.trackmania_material.needs_lightmap_uv
+            
+            if needs_base_material_uv and 'BaseMaterial' not in object.data.uv_layers:
+                self.report({'ERROR'}, 'Mesh {} is missing a BaseMaterial UV layer.'.format(object.name))
+                has_material_errors = True
+            if needs_lightmap_uv and 'Lightmap' not in object.data.uv_layers:
+                self.report({'ERROR'}, 'Mesh {} is missing a Lightmap UV layer.'.format(object.name))
+                has_material_errors = True
+        if has_material_errors:
+            return False
         
         # 1> Save/Update special objects names
         old_object_names = []
@@ -36,29 +55,18 @@ class SCENE_OT_TrackmaniaExportMesh(export_operator_base._SCENE_OT_TrackmaniaExp
                 old_object_names.append((object, object.name))
                 object.name = object.data.trackmania_mesh.get_export_name(object.name)
         
-        # 2> Save/Update window scene
-        old_window_scene = context.window.scene
-        context.window.scene = context.scene
-        
         # Export
+        success = False
         try:
             path.parents[0].mkdir(parents=True, exist_ok=True)
-            bpy.ops.export_scene.fbx(filepath=str(path) + '.fbx', object_types={'MESH', 'LIGHT'}, axis_up='Y', use_selection=True)
-            self.report({'INFO'}, 'Mesh exported successfully: ' + str(path) + '.fbx.')
+            bpy.ops.export_scene.fbx(filepath=str(path), object_types={'MESH', 'LIGHT'}, axis_up='Y', use_selection=True)
+            self.report({'INFO'}, 'Mesh {} exported to {}.'.format(path.name, path.parents[0]))
+            success = True
         except Exception as e:
-            self.report({'ERROR'}, 'Error occured while exporting mesh: ' + str(e))
-        
-        # 2< Restore window scene
-        context.window.scene = old_window_scene
+            self.report({'ERROR'}, 'Failed to export mesh {} to {}: {}'.format(path.name, path.parents[0], e))
         
         # 1< Restore special objects names
         for object_name in old_object_names:
             object_name[0].name = object_name[1]
         
-        return {'FINISHED'}
-
-def register():
-    bpy.utils.register_class(SCENE_OT_TrackmaniaExportMesh)
-
-def unregister():
-    bpy.utils.unregister_class(SCENE_OT_TrackmaniaExportMesh)
+        return success

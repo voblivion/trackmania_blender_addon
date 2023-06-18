@@ -2,17 +2,12 @@ import bpy
 from bpy.types import Panel
 
 
-class LIGHT_PT_TrackmaniaLight(Panel):
-    bl_idname = 'LIGHT_PT_TrackmaniaLight'
-    bl_label = 'Trackmania Light'
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
+class _SHARED_PT_TrackmaniaLight(Panel):
     bl_category = 'Trackmania'
-    bl_context = 'data'
     
     @classmethod
     def poll(cls, context):
-        return context.active_object is not None and context.active_object.type == 'LIGHT'
+        return context.active_object in context.selected_objects and context.active_object.type == 'LIGHT'
     
     def draw(self, context):
         layout = self.layout
@@ -31,8 +26,22 @@ class LIGHT_PT_TrackmaniaLight(Panel):
             layout.prop(light, 'spot_size')
             layout.prop(light, 'spot_blend')
 
-def register():
-    bpy.utils.register_class(LIGHT_PT_TrackmaniaLight)
+class PROPERTIES_PT_TrackmaniaLight(_SHARED_PT_TrackmaniaLight):
+    bl_idname = 'PROPERTIES_PT_TrackmaniaLight'
+    bl_label = 'Trackmania'
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_context = 'data'
 
-def unregister():
-    bpy.utils.unregister_class(LIGHT_PT_TrackmaniaLight)
+class VIEW3D_PT_TrackmaniaLight(_SHARED_PT_TrackmaniaLight):
+    bl_idname = 'VIEW3D_PT_TrackmaniaLight'
+    bl_label = 'Light'
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    
+    def draw_header(self, context):
+        self.text = 'Light - ' + context.active_object.name
+    
+    def draw(self, context):
+        self.text = 'Item - ' + context.active_object.name
+        super().draw(context)

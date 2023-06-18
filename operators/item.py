@@ -1,17 +1,14 @@
-import bpy
-from . import export_operator_base
-from ..utils import export
-from ..utils import tm
-from ..utils import preferences
 import os
 import math
 from xml.etree import ElementTree as xml
 from xml.dom import minidom
+from . import base
+from ..utils import preferences
 
 # HACK reload
 import importlib
-export = importlib.reload(export)
-export_operator_base = importlib.reload(export_operator_base)
+base = importlib.reload(base)
+preferences = importlib.reload(preferences)
 
 
 def _gamma_correct(channel):
@@ -23,25 +20,18 @@ def _color_to_hex(color):
     result = ''
     return '{:02X}{:02X}{:02X}'.format(_gamma_correct(color.r), _gamma_correct(color.g), _gamma_correct(color.b))
 
-
-class SCENE_OT_TrackmaniaExportItem(export_operator_base._SCENE_OT_TrackmaniaExportBase):
+class SCENE_OT_TrackmaniaExportItem(base.SCENE_OT_TrackmaniaExportBase):
     bl_idname = 'trackmania.export_item'
-    bl_label = 'Export Item'
-    bl_options = {'REGISTER'}
+    bl_label = 'Trackmania Export Item'
+    bl_description = 'Exports .Item.xml of selected items.'
     
-    def execute(self, context):
-        objects = context.view_layer.objects.selected
-        collection = context.collection
-        item_settings = collection.trackmania_item
-        
-        # Generate Path
-        base_path = export.get_base_export_path(context)
-        sub_path = self.get_sub_path(context)
-        if sub_path is None:
-            return {'CANCELLED'}
-        path = base_path / sub_path
-        
-        mesh_params_path_name = str(base_path / sub_path.parents[0] / 'Mesh' / sub_path.name) + '.MeshParams.xml'
+    def export(self, context):
+        objects = context.selected_objects
+        item_settings = context.collection.trackmania_item
+        item_path = base.SCENE_OT_TrackmaniaExportBase.get_item_path(context)
+        base_path = item_path.parents[0] / 'Mesh' / item_path.name
+        mesh_params_path = base_path.with_suffix('.MeshParams.xml')
+        path = item_path.with_suffix('.Item.xml')
         
         # Generate XML
         xml_item = xml.Element('Item')
@@ -51,7 +41,7 @@ class SCENE_OT_TrackmaniaExportItem(export_operator_base._SCENE_OT_TrackmaniaExp
         
         # .1 MeshParamsLink
         xml_mesh_params_link = xml.SubElement(xml_item, 'MeshParamsLink')
-        xml_mesh_params_link.set('File', os.path.relpath(mesh_params_path_name, path.parents[0]))
+        xml_mesh_params_link.set('File', os.path.relpath(mesh_params_path, path.parents[0]))
         
         # .2 Waypoint
         if item_settings.waypoint_type != 'NONE':
@@ -95,16 +85,10 @@ class SCENE_OT_TrackmaniaExportItem(export_operator_base._SCENE_OT_TrackmaniaExp
         # Export
         try:
             path.parents[0].mkdir(parents=True, exist_ok=True)
-            file = open(str(path) + '.Item.xml', 'w')
+            file = open(str(path), 'w')
             file.write(minidom.parseString(xml.tostring(xml_item)).toprettyxml())
-            self.report({'INFO'}, 'Item exported successfully: ' + str(path) + '.Item.xml.')
+            self.report({'INFO'}, 'Item {} exported to {}.'.format(path.name, path.parents[0]))
         except Exception as e:
-            self.report({'ERROR'}, 'Error occured while exporting item: ' + str(e))
+            self.report({'ERROR'}, 'Failed to export item {} to {}: {}'.format(path.name, path.parents[0], e))
         
-        return {'FINISHED'}
-
-def register():
-    bpy.utils.register_class(SCENE_OT_TrackmaniaExportItem)
-
-def unregister():
-    bpy.utils.unregister_class(SCENE_OT_TrackmaniaExportItem)
+        return True
