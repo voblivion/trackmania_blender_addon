@@ -1,4 +1,5 @@
 import bpy
+# primary
 from . import all
 from . import copy
 from . import icon
@@ -13,6 +14,15 @@ from .item import (SCENE_OT_TrackmaniaExportItem,)
 from .mesh import (SCENE_OT_TrackmaniaExportMesh,)
 from .mesh_params import (SCENE_OT_TrackmaniaExportMeshParams,)
 from .nadeo_import import (SCENE_OT_TrackmaniaNadeoImport,)
+# secondary
+from . import uv
+from .uv import (
+    SCENE_OT_SelectUVLayer,
+    SCENE_OT_CreateUVLayer,
+    SCENE_OT_TrackmaniaAddDefaultMaterial,
+    SCENE_OT_TrackmaniaCreateMissingUVLayers,
+    SCENE_OT_TrackmaniaRemoveExtraUVLayers,
+)
 
 # HACK
 from importlib import reload
@@ -23,6 +33,7 @@ item = reload(item)
 mesh = reload(mesh)
 mesh_params = reload(mesh_params)
 nadeo_import = reload(nadeo_import)
+uv = reload(uv)
 
 
 operators = [
@@ -34,9 +45,16 @@ operators = [
     mesh.SCENE_OT_TrackmaniaExportMesh,
     mesh_params.SCENE_OT_TrackmaniaExportMeshParams,
     nadeo_import.SCENE_OT_TrackmaniaNadeoImport,
+    
+    uv.SCENE_OT_SelectUVLayer,
+    uv.SCENE_OT_CreateUVLayer,
+    uv.SCENE_OT_TrackmaniaAddDefaultMaterial,
+    uv.SCENE_OT_TrackmaniaCreateMissingUVLayers,
+    uv.SCENE_OT_TrackmaniaRemoveExtraUVLayers,
 ]
 
 def register():
+    bpy.types.Scene.selected_material = bpy.props.StringProperty(default='')
     for operator in operators:
         bpy.utils.register_class(operator)
 
