@@ -176,4 +176,6 @@ class SCENE_OT_TrackmaniaPrefixItem(Operator):
         
         element.name = 'Z' + str(context.scene.current_item_prefix) + '-' + name
         context.scene.current_item_prefix = context.scene.current_item_prefix - 1
+        
+        return {'FINISHED'}
 
