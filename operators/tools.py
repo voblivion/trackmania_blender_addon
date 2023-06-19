@@ -1,6 +1,7 @@
 import bpy
 from bpy.types import (Operator,)
 from bpy.props import (PointerProperty, StringProperty,)
+import re
 
 class SCENE_OT_SelectUVLayer(Operator):
     bl_idname = 'uv.select_layer'
@@ -160,4 +161,19 @@ class SCENE_OT_TrackmaniaRemoveExtraUVLayers(Operator):
         
         return {'FINISHED'}
 
+
+
+class SCENE_OT_TrackmaniaPrefixItem(Operator):
+    bl_idname = 'trackmania.prefix_rename'
+    bl_label = 'Add Prefix'
+    bl_description = 'Adds current ordering prefix to active element (object or collection) and decrements it for future uses.'
+    
+    def execute(self, context):
+        element = context.collection if context.active_object not in context.selected_objects else context.active_object
+        
+        match = re.search(r'^Z\d+-(.*)$', element.name)
+        name = match.group(1) if match else element.name
+        
+        element.name = 'Z' + str(context.scene.current_item_prefix) + '-' + name
+        context.scene.current_item_prefix = context.scene.current_item_prefix - 1
 

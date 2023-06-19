@@ -4,7 +4,7 @@ from . import item
 from . import light
 from . import material
 from . import mesh
-from . import uv
+from . import tools
 
 # HACK
 from importlib import reload
@@ -13,7 +13,7 @@ item = reload(item)
 light = reload(light)
 material = reload(material)
 mesh = reload(mesh)
-uv = reload(uv)
+tools = reload(tools)
 
 panels = [
     export.VIEW3D_PT_TrackmaniaExport,
@@ -28,7 +28,10 @@ panels = [
     material.MATERIAL_PT_TrackmaniaMaterial,
     mesh.PROPERTIES_PT_TrackmaniaMesh,
     mesh.VIEW3D_PT_TrackmaniaMesh,
-    uv.VIEW3D_PT_TrackmaniaMaterials,
+    tools.VIEW3D_PT_TrackmaniaTools,
+    tools.VIEW3D_PT_TrackmaniaToolsMaterials,
+    tools.VIEW3D_PT_TrackmaniaToolsUVs,
+    tools.VIEW3D_PT_TrackmaniaToolsItem,
 ]
 
 def register():

@@ -15,13 +15,14 @@ from .mesh import (SCENE_OT_TrackmaniaExportMesh,)
 from .mesh_params import (SCENE_OT_TrackmaniaExportMeshParams,)
 from .nadeo_import import (SCENE_OT_TrackmaniaNadeoImport,)
 # secondary
-from . import uv
-from .uv import (
+from . import tools
+from .tools import (
     SCENE_OT_SelectUVLayer,
     SCENE_OT_CreateUVLayer,
     SCENE_OT_TrackmaniaAddDefaultMaterial,
     SCENE_OT_TrackmaniaCreateMissingUVLayers,
     SCENE_OT_TrackmaniaRemoveExtraUVLayers,
+    SCENE_OT_TrackmaniaPrefixItem,
 )
 
 # HACK
@@ -33,7 +34,7 @@ item = reload(item)
 mesh = reload(mesh)
 mesh_params = reload(mesh_params)
 nadeo_import = reload(nadeo_import)
-uv = reload(uv)
+tools = reload(tools)
 
 
 operators = [
@@ -46,15 +47,18 @@ operators = [
     mesh_params.SCENE_OT_TrackmaniaExportMeshParams,
     nadeo_import.SCENE_OT_TrackmaniaNadeoImport,
     
-    uv.SCENE_OT_SelectUVLayer,
-    uv.SCENE_OT_CreateUVLayer,
-    uv.SCENE_OT_TrackmaniaAddDefaultMaterial,
-    uv.SCENE_OT_TrackmaniaCreateMissingUVLayers,
-    uv.SCENE_OT_TrackmaniaRemoveExtraUVLayers,
+    tools.SCENE_OT_SelectUVLayer,
+    tools.SCENE_OT_CreateUVLayer,
+    tools.SCENE_OT_TrackmaniaAddDefaultMaterial,
+    tools.SCENE_OT_TrackmaniaCreateMissingUVLayers,
+    tools.SCENE_OT_TrackmaniaRemoveExtraUVLayers,
+    tools.SCENE_OT_TrackmaniaPrefixItem,
 ]
 
 def register():
     bpy.types.Scene.selected_material = bpy.props.StringProperty(default='')
+    bpy.types.Scene.current_item_prefix = bpy.props.IntProperty(default=99)
+    
     for operator in operators:
         bpy.utils.register_class(operator)
 
