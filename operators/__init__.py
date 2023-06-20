@@ -19,11 +19,15 @@ from . import tools
 from .tools import (
     SCENE_OT_SelectUVLayer,
     SCENE_OT_CreateUVLayer,
+    SCENE_OT_TrackmaniaImportDefaultMaterials,
+    SCENE_OT_TrackmaniaCreateCustomMaterial,
     SCENE_OT_TrackmaniaAddDefaultMaterial,
     SCENE_OT_TrackmaniaCreateMissingUVLayers,
     SCENE_OT_TrackmaniaRemoveExtraUVLayers,
     SCENE_OT_TrackmaniaPrefixItem,
 )
+# special
+from ..properties.material import _get_trackmania_materials
 
 # HACK
 from importlib import reload
@@ -49,14 +53,24 @@ operators = [
     
     tools.SCENE_OT_SelectUVLayer,
     tools.SCENE_OT_CreateUVLayer,
+    tools.SCENE_OT_TrackmaniaImportDefaultMaterials,
+    tools.SCENE_OT_TrackmaniaCreateCustomMaterial,
     tools.SCENE_OT_TrackmaniaAddDefaultMaterial,
     tools.SCENE_OT_TrackmaniaCreateMissingUVLayers,
     tools.SCENE_OT_TrackmaniaRemoveExtraUVLayers,
     tools.SCENE_OT_TrackmaniaPrefixItem,
 ]
 
+def _get_custom_material_identifiers(self, context):
+    return [(identifier, identifier, '') for identifier in _get_trackmania_materials(context) if 'Custom' in identifier]
+
 def register():
-    bpy.types.Scene.selected_material = bpy.props.StringProperty(default='')
+    bpy.types.Scene.custom_material = bpy.props.EnumProperty(
+        items=_get_custom_material_identifiers,
+        name='Custom Material',
+        default=0,
+    )
+    bpy.types.Scene.default_material = bpy.props.StringProperty(default='')
     bpy.types.Scene.current_item_prefix = bpy.props.IntProperty(default=99)
     
     for operator in operators:

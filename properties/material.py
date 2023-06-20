@@ -111,7 +111,12 @@ class MATERIAL_PG_TrackmaniaMaterial(PropertyGroup):
     def can_customize_color(self):
         trackmania_materials = _get_trackmania_materials(bpy.context)
         return self.identifier in trackmania_materials and trackmania_materials[self.identifier].can_customize_color
-
+    
+    def _update_color(self, context):
+        node_tree = context.material.node_tree
+                
+        # trackmania_color = material.node_tree.nodes.new('RGB', label='Trackmania Color')
+    
     color: FloatVectorProperty(
         name='Color',
         description='Color for Custom materials',
@@ -119,5 +124,6 @@ class MATERIAL_PG_TrackmaniaMaterial(PropertyGroup):
         size=3,
         min=0,
         max=1,
-        default=(1, 1, 1)
+        default=(1, 1, 1),
+        update=_update_color,
     )

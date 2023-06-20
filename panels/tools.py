@@ -28,7 +28,10 @@ class VIEW3D_PT_TrackmaniaToolsMaterials(Panel):
     def draw(self, context):
         layout = self.layout
         
-        layout.prop_search(context.scene, 'selected_material', bpy.data, 'materials', text='Default Material')
+        layout.operator(operators.SCENE_OT_TrackmaniaImportDefaultMaterials.bl_idname)
+        layout.prop(context.scene, 'custom_material')
+        layout.operator(operators.SCENE_OT_TrackmaniaCreateCustomMaterial.bl_idname)
+        layout.prop_search(context.scene, 'default_material', bpy.data, 'materials', text='Default Material')
         layout.operator(operators.SCENE_OT_TrackmaniaAddDefaultMaterial.bl_idname)
 
 class VIEW3D_PT_TrackmaniaToolsUVs(Panel):

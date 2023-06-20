@@ -23,7 +23,7 @@ class MATERIAL_PT_TrackmaniaMaterial(Panel):
         if material_settings.needs_base_material_uv:
             required_uv_layers.append('BaseMaterial')
         if material_settings.needs_lightmap_uv:
-            required_uv_layers.append('Liehgtmap')
+            required_uv_layers.append('Lightmap')
         
         layout.label(text='Required UV layers: ' + ('None' if not required_uv_layers else ', '.join(required_uv_layers)))
         layout.prop(material_settings, 'physics')
@@ -31,3 +31,6 @@ class MATERIAL_PT_TrackmaniaMaterial(Panel):
             layout.prop(material_settings, 'gameplay')
         if material_settings.can_customize_color:
             layout.prop(material_settings, 'color')
+        
+                        
+                
