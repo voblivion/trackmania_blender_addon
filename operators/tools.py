@@ -64,7 +64,7 @@ class SCENE_OT_CreateUVLayer(Operator):
         return {'FINISHED'}
 
 def _init_material(material, image):
-    material.use_nodes = True  
+    material.use_nodes = True
     nodes = material.node_tree.nodes
     links = material.node_tree.links
     
@@ -181,10 +181,21 @@ class SCENE_OT_TrackmaniaAddDefaultMaterial(Operator):
     def execute(self, context):
         objects = context.selected_objects
         
+        # 1. Pick material to assign
+        # 1.1. Default to user chosen material
         material = bpy.data.materials[context.scene.default_material] if context.scene.default_material in bpy.data.materials else None
+        # 1.2. Fallback to existing 'PlatformTech' material
         if not material:
-            material = bpy.data.materials.new(name='Default')
-            material.trackmania_material.identifier = 'PlatformTech'
+            material = bpy.data.materials['PlatformTech'] if 'PlatformTech' in bpy.data.materials else None
+        # 1.3. Fallback to creating 'PlatformTech' material
+        if not material:
+            material_name = 'PlatformTech'
+            material_textures = _load_default_material_textures()
+            texture_name = next((mt[1] for mt in material_textures if mt[0] == material_name), None)
+            image = bpy.data.images.load(_get_texture_dir() + '\\' + texture_name, check_existing=True) if texture_name else None
+            material = bpy.data.materials.new(name=material_name)
+            material.trackmania_material.identifier = material_name
+            _init_material(material, image)
         
         modified_meshes_count = 0
         
@@ -193,7 +204,7 @@ class SCENE_OT_TrackmaniaAddDefaultMaterial(Operator):
                 continue
             
             mesh = object.data
-            materials = [material for material in mesh.materials if material is not None]
+            materials = [m for m in mesh.materials if m is not None]
             if not materials:
                 self.report({'INFO'}, 'Material \'{}\' was added to mesh {}.'.format(material.name, object.name))
                 mesh.materials.append(material)
@@ -290,8 +301,6 @@ class SCENE_OT_TrackmaniaRemoveExtraUVLayers(Operator):
         
         return {'FINISHED'}
 
-
-
 class SCENE_OT_TrackmaniaPrefixItem(Operator):
     bl_idname = 'trackmania.prefix_rename'
     bl_label = 'Add Prefix'
@@ -308,3 +317,48 @@ class SCENE_OT_TrackmaniaPrefixItem(Operator):
         
         return {'FINISHED'}
 
+class SCENE_OT_TrackmaniaSetTrigger(Operator):
+    bl_idname = 'trackmania.set_trigger'
+    bl_label = 'Set Trigger'
+    bl_description = 'Sets selected objects as trigger.'
+    
+    def execute(self, context):
+        objects = context.selected_objects
+        
+        # 1. Pick trigger material to assign
+        # 1.1. Default to existing 'TrackmaniaTrigger' material
+        material = bpy.data.materials['TrackmaniaTrigger'] if 'TrackmaniaTrigger' in bpy.data.materials else None
+        # 1.2. Fallback to creating 'TrackmaniaTrigger' material
+        if material is None:
+            material = bpy.data.materials.new(name='TrackmaniaTrigger')
+            material.use_nodes = True
+            nodes = material.node_tree.nodes
+            links = material.node_tree.links
+            
+            principled_bsdf = nodes.get('Principled BSDF')
+            principled_bsdf.inputs['Base Color'].default_value[0] = 1
+            principled_bsdf.inputs['Base Color'].default_value[1] = 0
+            principled_bsdf.inputs['Base Color'].default_value[2] = 1
+            principled_bsdf.inputs['Alpha'].default_value = 0.25
+            material.blend_method = 'BLEND'
+        
+        trigger_count = 0
+        for object in objects:
+            if object.type != 'MESH':
+                continue
+            
+            mesh = object.data
+            if mesh.trackmania_mesh.mesh_type == 'TRIGGER':
+                continue
+            
+            mesh.trackmania_mesh.mesh_type = 'TRIGGER'
+            
+            print(dir(material))
+            mesh.materials.clear()
+            
+            mesh.materials.append(material)
+            trigger_count = trigger_count + 1
+        
+        self.report({'INFO'}, '{} triggers were created.'.format(trigger_count))
+        
+        return {'FINISHED'}

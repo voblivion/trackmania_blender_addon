@@ -65,7 +65,7 @@ class VIEW3D_PT_TrackmaniaToolsUVs(Panel):
 
 class VIEW3D_PT_TrackmaniaToolsItem(Panel):
     bl_idname = 'VIEW3D_PT_TrackmaniaToolsItem'
-    bl_label = 'Names'
+    bl_label = 'Item'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'Trackmania'
@@ -76,3 +76,4 @@ class VIEW3D_PT_TrackmaniaToolsItem(Panel):
         
         layout.prop(context.scene, 'current_item_prefix', text='Current Prefix')
         layout.operator(operators.SCENE_OT_TrackmaniaPrefixItem.bl_idname, text='Rename With Prefix')
+        layout.operator(operators.SCENE_OT_TrackmaniaSetTrigger.bl_idname, text='Set Trigger')
