@@ -301,11 +301,36 @@ class SCENE_OT_TrackmaniaPrefixItem(Operator):
     def execute(self, context):
         element = context.collection if context.active_object not in context.selected_objects else context.active_object
         
-        match = re.search(r'^Z\d+-(.*)$', element.name)
-        name = match.group(1) if match else element.name
+        # Ensure prefix has valid form
+        prefix_regex = '^([^\d]*)(-?\d+)([^\d]*)$'
+        prefix_match = re.search(prefix_regex, context.scene.current_item_prefix)
+        if not prefix_match:
+            self.report(
+                {'ERROR'},
+                'Invalid item prefix \'{}\. Prefix must match the regular expression `{}` (= contain exactly 1 number).'.format(context.scene.current_item_prefix, regex)
+            )
+            return {'CANCELLED'}
         
-        element.name = 'Z' + str(context.scene.current_item_prefix) + '-' + name
-        context.scene.current_item_prefix = context.scene.current_item_prefix - 1
+        pre = prefix_match.group(1)
+        index_str = prefix_match.group(2)
+        post = prefix_match.group(3)
+        
+        # Remove previous prefix if found
+        name_prefix_regex = '^' + pre + '-?\d+' + post + '(.*)$'
+        name_match = re.search(name_prefix_regex, element.name)
+        name = name_match.group(1) if name_match else element.name
+        
+        # Rename element
+        element.name = context.scene.current_item_prefix + name
+        
+        new_index = int(index_str) - 1
+        if new_index < 0:
+            self.report({'WARNING'}, 'Ran out of indices. Current item prefix must be reset.')
+            return {'FINISHED'}
+        
+        new_index_str = str(new_index).zfill(len(index_str))
+        
+        context.scene.current_item_prefix = pre + new_index_str + post
         
         return {'FINISHED'}
 

@@ -65,7 +65,7 @@ class VIEW3D_PT_TrackmaniaToolsUVs(Panel):
 
 class VIEW3D_PT_TrackmaniaToolsItem(Panel):
     bl_idname = 'VIEW3D_PT_TrackmaniaToolsItem'
-    bl_label = 'Item'
+    bl_label = 'Object / Collection'
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = 'Trackmania'

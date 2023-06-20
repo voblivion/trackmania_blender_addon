@@ -73,7 +73,7 @@ def register():
         default=0,
     )
     bpy.types.Scene.default_material = bpy.props.StringProperty(default='')
-    bpy.types.Scene.current_item_prefix = bpy.props.IntProperty(default=99)
+    bpy.types.Scene.current_item_prefix = bpy.props.StringProperty(default='Z99')
     
     for operator in operators:
         bpy.utils.register_class(operator)
