@@ -370,7 +370,6 @@ class SCENE_OT_TrackmaniaSetTrigger(Operator):
             
             mesh.trackmania_mesh.mesh_type = 'TRIGGER'
             
-            print(dir(material))
             mesh.materials.clear()
             
             mesh.materials.append(material)
