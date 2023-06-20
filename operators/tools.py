@@ -3,24 +3,10 @@ from bpy.types import (Operator,)
 from bpy.props import (PointerProperty, StringProperty,)
 import re
 import os
+import pathlib
+from ..utils import textures as texture_utils
+from ..utils import preferences
 
-def _get_texture_dir():
-    base = os.path.dirname(__file__)
-    path = os.path.abspath(os.path.join(base, '..', 'textures'))
-    return path
-
-def _load_default_material_textures():
-    path = _get_texture_dir() + '/default_material_textures.txt'
-    file = open(path)
-    lines = file.readlines()
-    
-    default_materials = []
-    for line in lines:
-        tokens = line[:-1].split(',')
-        if len(tokens) < 2:
-            continue
-        default_materials.append((tokens[0], tokens[1]))
-    return default_materials
 
 class SCENE_OT_SelectUVLayer(Operator):
     bl_idname = 'uv.select_layer'
@@ -126,13 +112,20 @@ def _init_material(material, image):
     else:
         links.new(texture_node.outputs[0], principled_bsdf.inputs['Base Color'])
 
+def _get_default_material_textures(context):
+    prefs = preferences.get(context)
+    materials_filepath = pathlib.Path(prefs.install_dir) / 'NadeoImporterMaterialLib.txt'
+    openplanet_extract_dir = pathlib.Path(prefs.openplanet_dir) / 'Extract'
+    
+    return texture_utils.get_default_material_textures(materials_filepath, openplanet_extract_dir)
+
 class SCENE_OT_TrackmaniaImportDefaultMaterials(Operator):
     bl_idname = 'trackmania.import_default_materials'
     bl_label = 'Import Default Materials'
     bl_description = 'Imports default materials to be used for mesh-modeling.'
     
     def execute(self, context):
-        default_material_textures = _load_default_material_textures()
+        default_material_textures = _get_default_material_textures(context)
         material_import_count = 0
         for default_material_texture in default_material_textures:
             material_name = default_material_texture[0]
@@ -140,8 +133,8 @@ class SCENE_OT_TrackmaniaImportDefaultMaterials(Operator):
             if material_name in bpy.data.materials:
                 continue
             
-            texture_name = default_material_texture[1]
-            image = bpy.data.images.load(_get_texture_dir() + '\\' + texture_name, check_existing=True)
+            texture_filepath = default_material_texture[1]
+            image = bpy.data.images.load(str(texture_filepath), check_existing=True)
             material = bpy.data.materials.new(name=material_name)
             material.trackmania_material.identifier = material_name
             _init_material(material, image)
@@ -158,20 +151,19 @@ class SCENE_OT_TrackmaniaCreateCustomMaterial(Operator):
     
     def execute(self, context):
         material_name = context.scene.custom_material
-        material_textures = _load_default_material_textures()
-        texture_name = next((mt[1] for mt in material_textures if mt[0] == material_name), None)
-        if texture_name is None:
+        material_textures = _get_default_material_textures(context)
+        texture_filepath = next((mt[1] for mt in material_textures if mt[0] == material_name), None)
+        if texture_filepath is None:
             self.report({'ERROR'}, 'Invalid custom material \'{}\''.format(material_name))
             return {'CANCELLED'}
         
-        image = bpy.data.images.load(_get_texture_dir() + '\\' + texture_name, check_existing=True)
+        image = bpy.data.images.load(str(texture_filepath), check_existing=True)
         material = bpy.data.materials.new(name='Custom Material')
         material.trackmania_material.identifier = material_name
         _init_material(material, image)
         
         self.report({'INFO'}, 'Material \'{}\' successfuly created.'.format(material.name))
         return {'FINISHED'}
-    
 
 class SCENE_OT_TrackmaniaAddDefaultMaterial(Operator):
     bl_idname = 'trackmania.add_default_material'
@@ -190,9 +182,9 @@ class SCENE_OT_TrackmaniaAddDefaultMaterial(Operator):
         # 1.3. Fallback to creating 'PlatformTech' material
         if not material:
             material_name = 'PlatformTech'
-            material_textures = _load_default_material_textures()
-            texture_name = next((mt[1] for mt in material_textures if mt[0] == material_name), None)
-            image = bpy.data.images.load(_get_texture_dir() + '\\' + texture_name, check_existing=True) if texture_name else None
+            material_textures = _get_default_material_textures(context)
+            texture_filepath = next((mt[1] for mt in material_textures if mt[0] == material_name), None)
+            image = bpy.data.images.load(str(texture_filepath), check_existing=True) if texture_filepath else None
             material = bpy.data.materials.new(name=material_name)
             material.trackmania_material.identifier = material_name
             _init_material(material, image)
