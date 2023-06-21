@@ -68,13 +68,37 @@ Note that the exporter will export based on your collections' item export settin
 - Every "Single" export-type collection containing a selected object will be exported into its own item (with other objects from the collection, selected or not).
 - Every selected object from a "Multiple" export-type collection will be exported into its own item (with pivots, selected or not).
 
+
 You can also perform partial exports (icon, mesh, mesh params, item, nadeo import) or do full export by binding a shortcut to one of the following operators:
-- trackmania.export_icon
-- trackmania.export_mesh
-- trackmania.export_mesh_params
-- trackmania.export_item
-- trackmania.nadeo_import
-- trackmania.export_all
+- trackmania.export_icon (exports the `.tga` icon)
+- trackmania.export_mesh (exports the `.fbx` mesh)
+- trackmania.export_mesh_params (exports the `.MeshParams.xml` file)
+- trackmania.export_item (exports the `.Item.xml` file)
+- trackmania.nadeo_import (calls nadeo importer on generated `.Item.xml` file)
+- trackmania.export_all (calls all previous export/nadeo_import operators)
 
 ![collection](https://github.com/voblivion/trackmania_blender_addon/blob/main/doc/shortcut.png?raw=true)
 
+## Tools
+
+![collection](https://github.com/voblivion/trackmania_blender_addon/blob/main/doc/tools.png?raw=true)
+
+Remember that every tool operator can be bound to your desired shortcut (see above).
+
+### UV
+
+- "Select <Name> Layer" (`uv.select_layer`): selects <Name> UV layer on selected meshes, so you can quickly switch between meshes to edit their UVs.
+- "Create <Name> Layer" (`uv.create_layer`): creates <Name> UV layer on selected meshes which do not yet own a layer with this <Name>.
+- "Create Missing Layers" (`trackmania.create_missing_uv_layers`): for each selected meshes, goes through materials and ensure their required UV layers (BaseMaterial and/or Lightmap) are present.
+- "Remove Extra Layers" (`trackmania.remove_extra_uv_layers`): for each selected meshes, remove UV layers which are not needed for any of the mesh's materials.
+
+### Material
+
+- "Import Default Materials" (`trackmania.import_default_materials`): imports default materials and their textures ; this assumes you extracted `Textures` and `Textures_BlockCustom` with OpenPlanet beforehand. The script with attempt to find the best texture for each trackmania material that can be exported, based on rules in `<trackmania 2020 blender toolbox>/utils/default_textures.ini`. You can edit this file if you figure wrong textures are chosen.
+- "Create Custom Material" (`trackmania.create_custom_material`): creates a custom material based on selected custom trackmania material type. This tool will setup material's shader nodes such that editing material's color will affect rendering in blender in a similar way it does in Trackmania.
+- "Add Default Material To Objects" (`trackmania.add_default_material`): adds selected default material to each selected object which doesn't have any material.
+
+### Object / Collection
+
+- "Rename With Prefix" (`trackmania.prefix_rename`): renames active object/collection with current prefix, and decrements number in current prefix. Current prefix must contain exactly one number for this tool to function.
+- "Set Trigger" (`trackmania.set_trigger`): makes each selected mesh a trigger (in regard to trackmania export settings). Also makes those meshes use the `TrackmaniaTrigger` to make it easier editting item's trigger and visual at the same time. 
