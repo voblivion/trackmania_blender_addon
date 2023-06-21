@@ -87,8 +87,8 @@ Remember that every tool operator can be bound to your desired shortcut (see abo
 
 ### UV
 
-- "Select <Name> Layer" (`uv.select_layer`): selects <Name> UV layer on selected meshes, so you can quickly switch between meshes to edit their UVs.
-- "Create <Name> Layer" (`uv.create_layer`): creates <Name> UV layer on selected meshes which do not yet own a layer with this <Name>.
+- "Select \<Name\> Layer" (`uv.select_layer`): selects \<Name\> UV layer on selected meshes, so you can quickly switch between meshes to edit their UVs.
+- "Create \<Name\> Layer" (`uv.create_layer`): creates \<Name\> UV layer on selected meshes which do not yet own a layer with this <Name>.
 - "Create Missing Layers" (`trackmania.create_missing_uv_layers`): for each selected meshes, goes through materials and ensure their required UV layers (BaseMaterial and/or Lightmap) are present.
 - "Remove Extra Layers" (`trackmania.remove_extra_uv_layers`): for each selected meshes, remove UV layers which are not needed for any of the mesh's materials.
 
