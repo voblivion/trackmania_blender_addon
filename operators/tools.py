@@ -394,7 +394,7 @@ class SCENE_OT_TrackmaniaCreateMaterialTestSet(Operator):
         max_row = max(1, math.ceil(np.emath.logn(n, total))) - 1
         
         if row == max_row:
-            vertices = [(1, 1, 0), (1, -1, 0), (-1, -1, 0), (-1, 1, 0)]
+            vertices = [(-1, -1, 0), (-1, 1, 0), (1, 1, 0), (1, -1, 0)]
             edges = [(0, 1), (1, 2), (2, 3), (3, 0)]
             faces = [(0, 1, 2, 3)]
             for i in range(0, n):

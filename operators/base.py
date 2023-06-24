@@ -38,7 +38,8 @@ def _get_collection_items(objects):
     collections = set()
     for object in objects:
         for collection in object.users_collection:
-            if collection.trackmania_item.export_type == 'SINGLE':
+            item_settings = _get_item_settings(collection)
+            if item_settings and item_settings.export_type == 'SINGLE':
                 collections.add(collection)
     items = []
     for collection in collections:
@@ -55,7 +56,8 @@ def _get_object_items(objects):
         if object.type not in ['MESH', 'LIGHT']:
             continue
         for collection in object.users_collection:
-            if collection.trackmania_item.export_type == 'MULTIPLE':
+            item_settings = _get_item_settings(collection)
+            if item_settings and item_settings.export_type == 'MULTIPLE':
                 items.append((
                     collection,
                     object,
@@ -89,7 +91,8 @@ class SCENE_OT_TrackmaniaExportBase(Operator):
         base_folder = pathlib.Path(preferences.get(context).user_dir) / 'Work' / 'Items'
 
         path = base_folder / _to_path(_get_collection_ancestry(context.collection))
-        if context.collection.trackmania_item.export_type == 'MULTIPLE':
+        item_settings = _get_item_settings(context.collection)
+        if item_settings.export_type == 'MULTIPLE':
             if context.active_object is None:
                 return None
             path = path / context.active_object.name
