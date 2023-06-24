@@ -26,6 +26,7 @@ from .tools import (
     SCENE_OT_TrackmaniaRemoveExtraUVLayers,
     SCENE_OT_TrackmaniaPrefixItem,
     SCENE_OT_TrackmaniaSetTrigger,
+    SCENE_OT_TrackmaniaCreateMaterialTestSet,
 )
 # special
 from ..properties.material import _get_trackmania_materials
@@ -61,6 +62,7 @@ operators = [
     tools.SCENE_OT_TrackmaniaRemoveExtraUVLayers,
     tools.SCENE_OT_TrackmaniaPrefixItem,
     tools.SCENE_OT_TrackmaniaSetTrigger,
+    tools.SCENE_OT_TrackmaniaCreateMaterialTestSet,
 ]
 
 def _get_custom_material_identifiers(self, context):

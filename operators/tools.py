@@ -1,9 +1,11 @@
 import bpy
 from bpy.types import (Operator,)
-from bpy.props import (PointerProperty, StringProperty,)
-import re
+from bpy.props import (IntProperty, PointerProperty, StringProperty,)
+import math
+import numpy as np
 import os
 import pathlib
+import re
 from ..utils import textures as texture_utils
 from ..utils import preferences
 
@@ -378,3 +380,55 @@ class SCENE_OT_TrackmaniaSetTrigger(Operator):
         self.report({'INFO'}, '{} triggers were created.'.format(trigger_count))
         
         return {'FINISHED'}
+
+class SCENE_OT_TrackmaniaCreateMaterialTestSet(Operator):
+    bl_idname = 'trackmania.create_material_test_set'
+    bl_label = 'Create Material Test Set'
+    bl_description = 'Creates objects and collections structure to be generated into a set whose purpose it to test loaded materials.'
+    
+    max_child_count: IntProperty(name='Max Child Count', default=8)
+    
+    def _execute(self, row, col, base, materials, collection):
+        n = self.max_child_count
+        total = len(materials)
+        max_row = max(1, math.ceil(np.emath.logn(n, total))) - 1
+        
+        if row == max_row:
+            vertices = [(1, 1, 0), (1, -1, 0), (-1, -1, 0), (-1, 1, 0)]
+            edges = [(0, 1), (1, 2), (2, 3), (3, 0)]
+            faces = [(0, 1, 2, 3)]
+            for i in range(0, n):
+                object_name = str(n - i - 1) + '-' + materials[base].name
+                mesh = bpy.data.meshes.new(object_name)
+                mesh.from_pydata(vertices, edges, faces)
+                mesh.update()
+                object = bpy.data.objects.new(object_name, mesh)
+                mesh.materials.append(materials[base])
+                collection.objects.link(object)
+                base = base + 1
+                if base >= total:
+                    return base
+        else:
+            for i in range(0, n):
+                child_collection_name = str(n - i - 1) + '-' + str(row) + '-' + materials[base].name
+                child_collection = bpy.data.collections.new(child_collection_name)
+                collection.children.link(child_collection)
+                base = self._execute(row + 1, i, base, materials, child_collection)
+                if base >= total:
+                    return base
+        return base
+        
+            
+    
+    def execute(self, context):
+        if 'MaterialTest' in bpy.data.collections:
+            bpy.data.collections.remove(bpy.data.collections['MaterialTest'])
+        material_test_collection = bpy.data.collections.new('MaterialTest')
+        context.scene.collection.children.link(material_test_collection)
+        
+        materials = sorted([m for m in bpy.data.materials], key=lambda m: m.name)
+        
+        self._execute(0, 0, 0, materials, material_test_collection)
+        
+        return {'FINISHED'}
+    

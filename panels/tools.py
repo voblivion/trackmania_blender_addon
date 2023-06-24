@@ -75,5 +75,6 @@ class VIEW3D_PT_TrackmaniaToolsItem(Panel):
         layout = self.layout
         
         layout.prop(context.scene, 'current_item_prefix', text='Current Prefix')
-        layout.operator(operators.SCENE_OT_TrackmaniaPrefixItem.bl_idname, text='Rename With Prefix')
-        layout.operator(operators.SCENE_OT_TrackmaniaSetTrigger.bl_idname, text='Set Trigger')
+        layout.operator(operators.SCENE_OT_TrackmaniaPrefixItem.bl_idname)
+        layout.operator(operators.SCENE_OT_TrackmaniaSetTrigger.bl_idname)
+        layout.operator(operators.SCENE_OT_TrackmaniaCreateMaterialTestSet.bl_idname)
