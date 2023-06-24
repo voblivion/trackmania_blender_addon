@@ -68,6 +68,9 @@ def _to_path(ancestry):
     if not ancestry:
         return pathlib.Path()
     
+    if not ancestry[-1].trackmania_item.creates_folder:
+        return _to_path(ancestry[:-1])
+    
     return _to_path(ancestry[:-1]) / _get_export_name(ancestry[-1])
 
 class SCENE_OT_TrackmaniaExportBase(Operator):
