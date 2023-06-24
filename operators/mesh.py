@@ -13,7 +13,7 @@ class SCENE_OT_TrackmaniaExportMesh(base.SCENE_OT_TrackmaniaExportBase):
     
     def export(self, context):
         objects = context.selected_objects
-        item_settings = context.collection.trackmania_item
+        item_settings = self.get_item_settings(context)
         item_path = base.SCENE_OT_TrackmaniaExportBase.get_item_path(context)
         path = (item_path.parents[0] / 'Mesh' / item_path.name).with_suffix('.fbx')
         

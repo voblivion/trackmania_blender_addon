@@ -17,7 +17,7 @@ class SCENE_OT_TrackmaniaNadeoImport(base.SCENE_OT_TrackmaniaExportBase):
     
     def export(self, context):
         objects = context.selected_objects
-        item_settings = context.collection.trackmania_item
+        item_settings = self.get_item_settings(context)
         path = base.SCENE_OT_TrackmaniaExportBase.get_item_path(context).with_suffix('.Item.xml')
         
         nadeo_importer_exe = str(pathlib.Path(preferences.get(context).install_dir, 'NadeoImporter.exe'))

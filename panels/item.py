@@ -46,7 +46,7 @@ class VIEW3D_PT_TrackmaniaItemLevitation(Panel):
         if context.active_object in context.selected_objects:
             return False
         
-        if context.collection.trackmania_item.export_type == 'NONE':
+        if context.collection.trackmania_item.export_type in ['NONE', 'INHERIT']:
             return False
         
         return True
@@ -73,7 +73,7 @@ class VIEW3D_PT_TrackmaniaItemGrid(Panel):
         if context.active_object in context.selected_objects:
             return False
         
-        if context.collection.trackmania_item.export_type == 'NONE':
+        if context.collection.trackmania_item.export_type in ['NONE', 'INHERIT']:
             return False
         
         return True
@@ -101,7 +101,7 @@ class VIEW3D_PT_TrackmaniaItemPivot(Panel):
         if context.active_object in context.selected_objects:
             return False
         
-        if context.collection.trackmania_item.export_type == 'NONE':
+        if context.collection.trackmania_item.export_type in ['NONE', 'INHERIT']:
             return False
         
         return True
@@ -130,7 +130,7 @@ class VIEW3D_PT_TrackmaniaItemMiscellaneous(Panel):
         if context.active_object in context.selected_objects:
             return False
         
-        if context.collection.trackmania_item.export_type == 'NONE':
+        if context.collection.trackmania_item.export_type in ['NONE', 'INHERIT']:
             return False
         
         return True
@@ -159,7 +159,7 @@ class VIEW3D_PT_TrackmaniaItemIcon(Panel):
         if context.active_object in context.selected_objects:
             return False
         
-        if context.collection.trackmania_item.export_type == 'NONE':
+        if context.collection.trackmania_item.export_type in ['NONE', 'INHERIT']:
             return False
         
         return True

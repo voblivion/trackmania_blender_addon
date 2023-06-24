@@ -25,6 +25,15 @@ def _get_parent_collection(collection):
             return scene.collection
     return None
 
+def _get_item_settings(collection):
+    if collection is None:
+        return None
+    
+    if collection.trackmania_item.export_type == 'INHERIT':
+        return _get_item_settings(_get_parent_collection(collection))
+    
+    return collection.trackmania_item
+    
 def _get_collection_items(objects):
     collections = set()
     for object in objects:
@@ -86,7 +95,10 @@ class SCENE_OT_TrackmaniaExportBase(Operator):
             path = path / context.active_object.name
         
         return path
-
+    
+    def get_item_settings(self, context):
+        return _get_item_settings(context.collection)
+    
     def execute(self, context):
         items = _get_items(context.selected_objects)
         success = 0

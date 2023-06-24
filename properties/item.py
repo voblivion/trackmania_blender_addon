@@ -13,11 +13,12 @@ class COLLECTION_PG_TrackmaniaItem(PropertyGroup):
     export_type: EnumProperty(
         name='Export Type',
         items=(
+            ('INHERIT', 'Inherit', 'Collection uses parent collection\'s export settings or None if collection is scene\'s main collection.'),
             ('NONE', 'None', 'Collection doesn\'t exported into any item and its direct child objects are not exported into any item.'),
             ('SINGLE', 'Single', 'Collection is exported into an unique item named after the collection and with all objects it contains.'),
             ('MULTIPLE', 'Multiple', 'Each mesh / light in the collection is exported into its own item. Pivots (empty objects) are shared.')
         ),
-        default='NONE'
+        default='INHERIT'
     )
     
     creates_folder: BoolProperty(
